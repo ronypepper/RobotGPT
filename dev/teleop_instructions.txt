@@ -1,0 +1,19 @@
+# Terminal 1:
+cd ~/RobotLearning
+source env_isaacteleop/bin/activate
+python -m isaacteleop.cloudxr --cloudxr-env-config=~/RobotLearning/quest3_cloudxr.env # Last argument enables optical hand tracking
+
+# Terminal 2:
+cd ~/RobotLearning/RobotGPT
+source ../env_isaaclab/bin/activate
+source /home/ronypepper/.cloudxr/run/cloudxr.env
+python scripts/teleop_se3_agent.py --task RobotGPT-Isaac-Lift-Cube-Franka-IK-Abs-v0 --teleop_device motioncontroller --xr --device cpu
+
+python scripts/zero_agent.py --task RobotGPT-Isaac-Lift-Cube-Franka-IK-Abs-v0 --enable_cameras --device cpu --num_envs 1
+
+python scripts/openpi_agent.py --task RobotGPT-Isaac-Lift-Cube-Franka-v0 --enable_cameras --device cpu --prompt "Pick up the cube and place it in the bin"
+
+cd ~/RobotLearning/openpi
+source .venv/bin/activate
+# XLA_PYTHON_CLIENT_MEM_FRACTION=0.5 uv run scripts/serve_policy.py --env=DROID
+XLA_PYTHON_CLIENT_MEM_FRACTION=0.5 uv run scripts/serve_policy.py policy:checkpoint --policy.config=pi05_droid --policy.dir=gs://openpi-assets/checkpoints/pi05_base

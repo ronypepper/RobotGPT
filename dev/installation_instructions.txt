@@ -1,0 +1,12 @@
+Isaac Lab installation according to docs (sim pip route)
+
+OpenPi installation (as detailed on github):
+git clone --recurse-submodules git@github.com:Physical-Intelligence/openpi.git
+cd openpi
+GIT_LFS_SKIP_SMUDGE=1 uv sync
+GIT_LFS_SKIP_SMUDGE=1 uv pip install -e .
+
+OpenPi client:
+source env_isaaclab/bin/activate
+cd openpi/packages/openpi-client
+uv pip install -e .
