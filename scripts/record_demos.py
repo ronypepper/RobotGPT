@@ -113,7 +113,7 @@ if args_cli.enable_pinocchio:
 
 from collections.abc import Callable
 
-import RobotGPT.tasks
+import RobotGPT.tasks  # noqa: F401
 
 from isaaclab.envs import DirectRLEnvCfg, ManagerBasedRLEnvCfg
 from isaaclab.envs.mdp.recorders.recorders_cfg import ActionStateRecorderManagerCfg
@@ -418,6 +418,7 @@ def run_simulation_loop(
     should_reset_recording_instance = False
     running_recording_instance = not args_cli.xr
     manual_success = False
+    manual_success_counter = 0
 
     # Callback closures for the teleop device
     def reset_recording_instance():
@@ -436,8 +437,10 @@ def run_simulation_loop(
         print("Recording paused")
 
     def success_recording_instance():
-        nonlocal manual_success
-        manual_success = True
+        nonlocal manual_success, manual_success_counter
+        manual_success_counter += 1
+        if manual_success_counter == 2:
+            manual_success = True
         print("Recording success")
 
     def start_stop_recording_instance():
@@ -515,6 +518,7 @@ def run_simulation_loop(
                 success_step_count = handle_reset(env, success_step_count, instruction_display, label_text)
                 should_reset_recording_instance = False
                 manual_success = False
+                manual_success_counter = 0
                 running_recording_instance = False
 
             # Check if simulation is stopped

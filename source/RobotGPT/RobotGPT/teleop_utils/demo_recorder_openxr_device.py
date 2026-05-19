@@ -23,20 +23,20 @@ class DemoRecorderOpenXRDevice(OpenXRDevice):
         super().__init__(cfg, retargeters)
         with contextlib.suppress(Exception):
             self._bind_button_press(
-                "/user/hand/right",
-                "a",
+                "/user/hand/left",
+                "x",
                 "signal_success",
                 lambda ev: self._signal_success(),
             )
             self._bind_button_press(
-                "/user/hand/left",
-                "y",
+                "/user/hand/right",
+                "b",
                 "signal_reset",
                 lambda ev: self._signal_reset(),
             )
             self._bind_button_press(
-                "/user/hand/left",
-                "x",
+                "/user/hand/right",
+                "a",
                 "signal_start_stop",
                 lambda ev: self._signal_start_stop(),
             )

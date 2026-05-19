@@ -74,3 +74,21 @@ gym.register(
     },
     disable_env_checker=True,
 )
+
+gym.register(
+    id="RobotGPT-Isaac-Lift-Cube-Franka-IK-Rel-v0",
+    entry_point="isaaclab.envs:ManagerBasedRLEnv",
+    kwargs={
+        "env_cfg_entry_point": f"{__name__}.ik_rel_env_cfg:FrankaCubeLiftEnvCfg",
+    },
+    disable_env_checker=True,
+)
+
+gym.register(
+    id="RobotGPT-Isaac-Lift-Teddy-Bear-Franka-IK-Rel-v0",
+    entry_point="isaaclab.envs:ManagerBasedRLEnv",
+    kwargs={
+        "env_cfg_entry_point": f"{__name__}.ik_rel_env_cfg:FrankaTeddyBearLiftEnvCfg",
+    },
+    disable_env_checker=True,
+)

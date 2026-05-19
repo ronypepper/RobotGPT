@@ -16,7 +16,7 @@ from RobotGPT.tasks.manager_based.place_cube_in_bin.lift_env_cfg import LiftEnvC
 # Pre-defined configs
 ##
 from isaaclab.markers.config import FRAME_MARKER_CFG  # isort: skip
-from isaaclab_assets.robots.franka import FRANKA_PANDA_CFG  # isort: skip
+from isaaclab_assets.robots.franka import FRANKA_PANDA_CFG, FRANKA_PANDA_HIGH_PD_CFG  # isort: skip
 
 
 @configclass
@@ -26,12 +26,22 @@ class FrankaCubeLiftEnvCfg(LiftEnvCfg):
         super().__post_init__()
 
         # Set Franka as robot
-        self.scene.robot = FRANKA_PANDA_CFG.replace(prim_path="{ENV_REGEX_NS}/Robot")
-        self.scene.robot.init_state.pos = (0, 0, 1)
+        self.scene.robot = FRANKA_PANDA_HIGH_PD_CFG.replace(prim_path="{ENV_REGEX_NS}/Robot")
+        # Configure default pose with vertically aligned gripper orientation for better teleoperation
+        self.scene.robot.init_state.joint_pos = {
+            "panda_joint1": 0.0444,
+            "panda_joint2": -0.1894,
+            "panda_joint3": -0.1107,
+            "panda_joint4": -2.5148,
+            "panda_joint5": 0.0044,
+            "panda_joint6": 2.3775,
+            "panda_joint7": 0.6952,
+            "panda_finger_joint.*": 0.04,
+        }
 
         # Set actions for the specific robot type (franka)
         self.actions.arm_action = mdp.JointPositionActionCfg(
-            asset_name="robot", joint_names=["panda_joint.*"], preserve_order=False, use_default_offset=False
+            asset_name="robot", joint_names=["panda_joint.*"], preserve_order=True, use_default_offset=False
         )
         self.actions.gripper_action = mdp.JointPositionActionCfg(
             asset_name="robot",
@@ -41,7 +51,10 @@ class FrankaCubeLiftEnvCfg(LiftEnvCfg):
             use_default_offset=False
         )
 
-        self.scene.ee_marker.prim_path="{ENV_REGEX_NS}/Robot/panda_hand"
+        # self.scene.ee_marker.prim_path="{ENV_REGEX_NS}/Robot/panda_hand/ee_marker"
+
+        # Set wrist camera anchor on robot
+        self.scene.wrist_cam.prim_path = "{ENV_REGEX_NS}/Robot/panda_hand/wrist_cam"
 
         # # Listens to the required transforms
         # marker_cfg = FRAME_MARKER_CFG.copy()

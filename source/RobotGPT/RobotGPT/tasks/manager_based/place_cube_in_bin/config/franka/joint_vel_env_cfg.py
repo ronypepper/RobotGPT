@@ -27,7 +27,17 @@ class FrankaCubeLiftEnvCfg(LiftEnvCfg):
 
         # Set Franka as robot
         self.scene.robot = FRANKA_PANDA_CFG.replace(prim_path="{ENV_REGEX_NS}/Robot")
-        self.scene.robot.init_state.pos = (0, 0, 1)
+        # Configure default pose with vertically aligned gripper orientation for better teleoperation
+        self.scene.robot.init_state.joint_pos = {
+            "panda_joint1": 0.0444,
+            "panda_joint2": -0.1894,
+            "panda_joint3": -0.1107,
+            "panda_joint4": -2.5148,
+            "panda_joint5": 0.0044,
+            "panda_joint6": 2.3775,
+            "panda_joint7": 0.6952,
+            "panda_finger_joint.*": 0.04,
+        }
 
         # Set actions for the specific robot type (franka)
         self.actions.arm_action = mdp.JointVelocityActionCfg(
@@ -41,7 +51,10 @@ class FrankaCubeLiftEnvCfg(LiftEnvCfg):
             use_default_offset=False
         )
 
-        self.scene.ee_marker.prim_path="{ENV_REGEX_NS}/Robot/panda_hand"
+        # self.scene.ee_marker.prim_path="{ENV_REGEX_NS}/Robot/panda_hand/ee_marker"
+
+        # Set wrist camera anchor on robot
+        self.scene.wrist_cam.prim_path = "{ENV_REGEX_NS}/Robot/panda_hand/wrist_cam"
 
         # # Listens to the required transforms
         # marker_cfg = FRAME_MARKER_CFG.copy()

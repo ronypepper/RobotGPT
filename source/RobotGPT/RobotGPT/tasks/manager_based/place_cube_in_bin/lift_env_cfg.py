@@ -13,13 +13,17 @@ from isaaclab.managers import EventTermCfg as EventTerm
 from isaaclab.managers import ObservationGroupCfg as ObsGroup
 from isaaclab.managers import ObservationTermCfg as ObsTerm
 from isaaclab.managers import SceneEntityCfg
+from isaaclab.managers import TerminationTermCfg as DoneTerm
 from isaaclab.scene import InteractiveSceneCfg
 from isaaclab.sensors import CameraCfg
 from isaaclab.sim.schemas.schemas_cfg import RigidBodyPropertiesCfg
 from isaaclab.sim.spawners.from_files.from_files_cfg import GroundPlaneCfg, UsdFileCfg
-from isaaclab.terrains import TerrainImporterCfg
 from isaaclab.utils import configclass
 from isaaclab.utils.assets import ISAAC_NUCLEUS_DIR, NVIDIA_NUCLEUS_DIR
+
+import RobotGPT.tasks.manager_based.place_cube_in_bin.randomize_utils as randomize_utils
+from RobotGPT.teleop_utils.image_openpi_observation import image_openpi
+from RobotGPT.teleop_utils.teleop_diff_ik_action import TeleopDifferentialInverseKinematicsActionCfg
 
 ##
 # Scene definition
@@ -38,8 +42,8 @@ class ObjectTableSceneCfg(InteractiveSceneCfg):
 
     # Table
     table = AssetBaseCfg(
-        prim_path="{ENV_REGEX_NS}/Table",
-        init_state=AssetBaseCfg.InitialStateCfg(pos=(0.5, 0, 1), rot=(0.707, 0, 0, 0.707)),
+        prim_path="{ENV_REGEX_NS}/table",
+        init_state=AssetBaseCfg.InitialStateCfg(pos=(0.5, 0, 0), rot=(0.707, 0, 0, 0.707)),
         spawn=UsdFileCfg(
             usd_path=f"{ISAAC_NUCLEUS_DIR}/Props/Mounts/SeattleLabTable/table_instanceable.usd",
             scale=(2.0, 1.0, 1.0),
@@ -53,14 +57,10 @@ class ObjectTableSceneCfg(InteractiveSceneCfg):
     #     spawn=GroundPlaneCfg(),
     # )
 
-    # usd environment
-    # terrain = TerrainImporterCfg(
-    #     prim_path="/World/ground",
-    #     terrain_type="usd",
-    #     usd_path=f"{ISAAC_NUCLEUS_DIR}/Environments/Simple_Warehouse/warehouse.usd",
-    # )
+    # usd background
     background = AssetBaseCfg(
         prim_path="/World/background",
+        init_state=AssetBaseCfg.InitialStateCfg(pos=(0, 0, -1)),
         spawn=UsdFileCfg(
             usd_path=f"{ISAAC_NUCLEUS_DIR}/Environments/Simple_Warehouse/warehouse.usd",
         ),
@@ -72,68 +72,66 @@ class ObjectTableSceneCfg(InteractiveSceneCfg):
         spawn=sim_utils.DomeLightCfg(color=(0.75, 0.75, 0.75), intensity=3000.0),
     )
 
-    # end-effector marker
-    ee_marker = AssetBaseCfg(
-        prim_path=MISSING,
-        spawn=UsdFileCfg(
-            usd_path=f"{ISAAC_NUCLEUS_DIR}/Props/UIElements/frame_prim.usd",
-            scale=(1.5, 1.5, 1.5),
-        )
-    )
+    # # end-effector marker
+    # ee_marker = AssetBaseCfg(
+    #     prim_path=MISSING,
+    #     init_state=RigidObjectCfg.InitialStateCfg(pos=(0.0, 0, 0.107), rot=(1, 0, 0, 0)),
+    #     spawn=UsdFileCfg(
+    #         usd_path=f"{ISAAC_NUCLEUS_DIR}/Props/UIElements/frame_prim.usd",
+    #         scale=(0.1, 0.1, 0.1),
+    #     )
+    # )
 
     # wrist view camera + visualization
     wrist_cam = CameraCfg(
-        prim_path="{ENV_REGEX_NS}/Robot/panda_hand/wrist_cam",
+        prim_path=MISSING,
         update_period=0.0,
-        height=200,
-        width=200,
+        height=480,
+        width=640,
         data_types=["rgb"],
         spawn=sim_utils.PinholeCameraCfg(
-            focal_length=24.0, focus_distance=400.0, horizontal_aperture=20.955, clipping_range=(0.1, 100)
+            focal_length=2.1, focus_distance=28.0, horizontal_aperture=5.376, vertical_aperture=3.024
         ),
         offset=CameraCfg.OffsetCfg(
-            pos=(0.18108, 0.0, -0.16356),
+            pos=(0.1009906081856474, -2.2170453280873081e-7, 0.005195286872436311),
             rot=(0.17074, 0.68618, 0.68618, 0.17074), convention="opengl"
         ),
-        # offset=CameraCfg.OffsetCfg(
-        #     pos=(0.13, 0.0, -0.15), rot=(-0.70614, 0.03701, 0.03701, -0.70614), convention="ros"
-        # ),
     )
-    wrist_cam_vis = AssetBaseCfg(
-        prim_path="{ENV_REGEX_NS}/Robot/panda_hand/wrist_cam/wrist_cam_visualization",
-        spawn=sim_utils.CuboidCfg(
-            size=(0.15, 0.05, 0.05),
-            visual_material=sim_utils.PreviewSurfaceCfg(diffuse_color=(1.0, 0.0, 0.0)),
-        ),
-    )
+    # wrist_cam_vis = AssetBaseCfg(
+    #     prim_path="{ENV_REGEX_NS}/Robot/panda_hand/wrist_cam/wrist_cam_visualization",
+    #     spawn=sim_utils.CuboidCfg(
+    #         size=(0.15, 0.05, 0.05),
+    #         visual_material=sim_utils.PreviewSurfaceCfg(diffuse_color=(1.0, 0.0, 0.0)),
+    #     )
+    # )
 
     # table view camera + visualization
     table_cam = CameraCfg(
         prim_path="{ENV_REGEX_NS}/table_cam",
         update_period=0.0,
-        height=200,
-        width=200,
+        height=480,
+        width=640,
         data_types=["rgb"],
         spawn=sim_utils.PinholeCameraCfg(
-            focal_length=24.0, focus_distance=400.0, horizontal_aperture=20.955, clipping_range=(0.1, 100)
+            focal_length=2.1, focus_distance=28.0, horizontal_aperture=5.376, vertical_aperture=3.024
         ),
         offset=CameraCfg.OffsetCfg(
-            pos=(-0.3069141847036739, 1.4860790429322785, 2.081719253805095),
+            pos=(-0.03890996200355793, 0.9736847657158553, 0.8084830725058005),
             rot=(0.24249, 0.09143, -0.47766, -0.83945), convention="opengl"
         ),
     )
-    table_cam_vis = AssetBaseCfg(
-        prim_path="{ENV_REGEX_NS}/table_cam/table_cam_visualization",
-        spawn=sim_utils.CuboidCfg(
-            size=(0.15, 0.05, 0.05),
-            visual_material=sim_utils.PreviewSurfaceCfg(diffuse_color=(1.0, 0.0, 0.0)),
-        ),
-    )
+    # table_cam_vis = AssetBaseCfg(
+    #     prim_path="{ENV_REGEX_NS}/table_cam/table_cam_visualization",
+    #     spawn=sim_utils.CuboidCfg(
+    #         size=(0.15, 0.05, 0.05),
+    #         visual_material=sim_utils.PreviewSurfaceCfg(diffuse_color=(1.0, 0.0, 0.0)),
+    #     )
+    # )
 
     # props
     cube = RigidObjectCfg(
         prim_path="{ENV_REGEX_NS}/cube",
-        init_state=RigidObjectCfg.InitialStateCfg(pos=(0.5, 0.25, 1.05), rot=(1, 0, 0, 0)),
+        init_state=RigidObjectCfg.InitialStateCfg(pos=(0.5, 0.25, 0.05), rot=(1, 0, 0, 0)),
         spawn=UsdFileCfg(
             usd_path=f"{ISAAC_NUCLEUS_DIR}/Props/Blocks/blue_block.usd",
             scale=(1.5, 1.5, 1.5),
@@ -148,9 +146,9 @@ class ObjectTableSceneCfg(InteractiveSceneCfg):
         ),
     )
 
-    box = RigidObjectCfg(
-        prim_path="{ENV_REGEX_NS}/box",
-        init_state=RigidObjectCfg.InitialStateCfg(pos=(0.5, -0.25, 1.05), rot=(1, 0, 0, 0)),
+    bin = RigidObjectCfg(
+        prim_path="{ENV_REGEX_NS}/bin",
+        init_state=RigidObjectCfg.InitialStateCfg(pos=(0.5, -0.25, 0.05), rot=(1, 0, 0, 0)),
         spawn=UsdFileCfg(
             usd_path=f"{ISAAC_NUCLEUS_DIR}/Props/KLT_Bin/small_KLT.usd",
             scale=(1.0, 1.0, 1.0),
@@ -176,7 +174,7 @@ class ActionsCfg:
     """Action specifications for the MDP."""
 
     # will be set by agent env cfg
-    arm_action: mdp.JointPositionActionCfg | mdp.JointVelocityActionCfg | mdp.DifferentialInverseKinematicsActionCfg = MISSING
+    arm_action: mdp.JointPositionActionCfg | mdp.JointVelocityActionCfg | mdp.DifferentialInverseKinematicsActionCfg | TeleopDifferentialInverseKinematicsActionCfg = MISSING
     gripper_action: mdp.JointPositionActionCfg | mdp.BinaryJointPositionActionCfg = MISSING
 
 
@@ -190,10 +188,10 @@ class ObservationsCfg:
 
         joint_pos = ObsTerm(func=mdp.joint_pos)
         table_img = ObsTerm(
-            func=mdp.image, params={"sensor_cfg": SceneEntityCfg("table_cam"), "data_type": "rgb", "normalize": False}
+            func=image_openpi, params={"sensor_cfg": SceneEntityCfg("table_cam"), "data_type": "rgb", "normalize": False}
         )
         wrist_img = ObsTerm(
-            func=mdp.image, params={"sensor_cfg": SceneEntityCfg("wrist_cam"), "data_type": "rgb", "normalize": False}
+            func=image_openpi, params={"sensor_cfg": SceneEntityCfg("wrist_cam"), "data_type": "rgb", "normalize": False}
         )
 
         def __post_init__(self):
@@ -210,36 +208,86 @@ class EventCfg:
 
     reset_all = EventTerm(func=mdp.reset_scene_to_default, mode="reset")
 
-    # randomize_light = EventTerm(
-    #     func=franka_stack_events.randomize_scene_lighting_domelight,
-    #     mode="reset",
-    #     params={
-    #         "intensity_range": (1500.0, 10000.0),
-    #         "color_variation": 0.4,
-    #         "textures": [
-    #             f"{NVIDIA_NUCLEUS_DIR}/Assets/Skies/Cloudy/abandoned_parking_4k.hdr",
-    #             f"{NVIDIA_NUCLEUS_DIR}/Assets/Skies/Cloudy/evening_road_01_4k.hdr",
-    #             f"{NVIDIA_NUCLEUS_DIR}/Assets/Skies/Cloudy/lakeside_4k.hdr",
-    #             f"{NVIDIA_NUCLEUS_DIR}/Assets/Skies/Indoor/autoshop_01_4k.hdr",
-    #             f"{NVIDIA_NUCLEUS_DIR}/Assets/Skies/Indoor/carpentry_shop_01_4k.hdr",
-    #             f"{NVIDIA_NUCLEUS_DIR}/Assets/Skies/Indoor/hospital_room_4k.hdr",
-    #             f"{NVIDIA_NUCLEUS_DIR}/Assets/Skies/Indoor/hotel_room_4k.hdr",
-    #             f"{NVIDIA_NUCLEUS_DIR}/Assets/Skies/Indoor/old_bus_depot_4k.hdr",
-    #             f"{NVIDIA_NUCLEUS_DIR}/Assets/Skies/Indoor/small_empty_house_4k.hdr",
-    #             f"{NVIDIA_NUCLEUS_DIR}/Assets/Skies/Indoor/surgery_4k.hdr",
-    #             f"{NVIDIA_NUCLEUS_DIR}/Assets/Skies/Studio/photo_studio_01_4k.hdr",
-    #         ],
-    #         "default_intensity": 3000.0,
-    #         "default_color": (0.75, 0.75, 0.75),
-    #         "default_texture": "",
-    #     },
-    # )
+    randomize_light = EventTerm(
+        func=randomize_utils.randomize_scene_lighting_domelight,
+        mode="reset",
+        params={
+            "intensity_range": (1500.0, 10000.0),
+            "color_variation": 0.4,
+            "textures": [
+                f"{NVIDIA_NUCLEUS_DIR}/Assets/Skies/Cloudy/abandoned_parking_4k.hdr",
+                f"{NVIDIA_NUCLEUS_DIR}/Assets/Skies/Cloudy/evening_road_01_4k.hdr",
+                f"{NVIDIA_NUCLEUS_DIR}/Assets/Skies/Cloudy/lakeside_4k.hdr",
+                f"{NVIDIA_NUCLEUS_DIR}/Assets/Skies/Indoor/autoshop_01_4k.hdr",
+                f"{NVIDIA_NUCLEUS_DIR}/Assets/Skies/Indoor/carpentry_shop_01_4k.hdr",
+                f"{NVIDIA_NUCLEUS_DIR}/Assets/Skies/Indoor/hospital_room_4k.hdr",
+                f"{NVIDIA_NUCLEUS_DIR}/Assets/Skies/Indoor/hotel_room_4k.hdr",
+                f"{NVIDIA_NUCLEUS_DIR}/Assets/Skies/Indoor/old_bus_depot_4k.hdr",
+                f"{NVIDIA_NUCLEUS_DIR}/Assets/Skies/Indoor/small_empty_house_4k.hdr",
+                f"{NVIDIA_NUCLEUS_DIR}/Assets/Skies/Indoor/surgery_4k.hdr",
+                f"{NVIDIA_NUCLEUS_DIR}/Assets/Skies/Studio/photo_studio_01_4k.hdr",
+            ],
+            "default_intensity": 3000.0,
+            "default_color": (0.75, 0.75, 0.75),
+            "default_texture": "",
+        },
+    )
 
     # randomize_table_visual_material = EventTerm(
-    #     func=franka_stack_events.randomize_visual_texture_material,
+    #     func=randomize_utils.randomize_visual_texture_material,
     #     mode="reset",
     #     params={
     #         "asset_cfg": SceneEntityCfg("table"),
+    #         "textures": [
+    #             f"{NVIDIA_NUCLEUS_DIR}/Materials/Base/Wood/Ash/Ash_BaseColor.png",
+    #             f"{NVIDIA_NUCLEUS_DIR}/Materials/Base/Wood/Bamboo_Planks/Bamboo_Planks_BaseColor.png",
+    #             f"{NVIDIA_NUCLEUS_DIR}/Materials/Base/Wood/Birch/Birch_BaseColor.png",
+    #             f"{NVIDIA_NUCLEUS_DIR}/Materials/Base/Wood/Cherry/Cherry_BaseColor.png",
+    #             f"{NVIDIA_NUCLEUS_DIR}/Materials/Base/Wood/Mahogany_Planks/Mahogany_Planks_BaseColor.png",
+    #             f"{NVIDIA_NUCLEUS_DIR}/Materials/Base/Wood/Oak/Oak_BaseColor.png",
+    #             f"{NVIDIA_NUCLEUS_DIR}/Materials/Base/Wood/Plywood/Plywood_BaseColor.png",
+    #             f"{NVIDIA_NUCLEUS_DIR}/Materials/Base/Wood/Timber/Timber_BaseColor.png",
+    #             f"{NVIDIA_NUCLEUS_DIR}/Materials/Base/Wood/Timber_Cladding/Timber_Cladding_BaseColor.png",
+    #             f"{NVIDIA_NUCLEUS_DIR}/Materials/Base/Wood/Walnut_Planks/Walnut_Planks_BaseColor.png",
+    #             f"{NVIDIA_NUCLEUS_DIR}/Materials/Base/Stone/Marble/Marble_BaseColor.png",
+    #             f"{NVIDIA_NUCLEUS_DIR}/Materials/Base/Metals/Steel_Stainless/Steel_Stainless_BaseColor.png",
+    #         ],
+    #         "default_texture": (
+    #             f"{ISAAC_NUCLEUS_DIR}/Props/Mounts/SeattleLabTable/Materials/Textures/DemoTable_TableBase_BaseColor.png"
+    #         ),
+    #     },
+    # )
+
+    # randomize_cube_visual_material = EventTerm(
+    #     func=randomize_utils.randomize_visual_texture_material,
+    #     mode="reset",
+    #     params={
+    #         "asset_cfg": SceneEntityCfg("cube"),
+    #         "textures": [
+    #             f"{NVIDIA_NUCLEUS_DIR}/Materials/Base/Wood/Ash/Ash_BaseColor.png",
+    #             f"{NVIDIA_NUCLEUS_DIR}/Materials/Base/Wood/Bamboo_Planks/Bamboo_Planks_BaseColor.png",
+    #             f"{NVIDIA_NUCLEUS_DIR}/Materials/Base/Wood/Birch/Birch_BaseColor.png",
+    #             f"{NVIDIA_NUCLEUS_DIR}/Materials/Base/Wood/Cherry/Cherry_BaseColor.png",
+    #             f"{NVIDIA_NUCLEUS_DIR}/Materials/Base/Wood/Mahogany_Planks/Mahogany_Planks_BaseColor.png",
+    #             f"{NVIDIA_NUCLEUS_DIR}/Materials/Base/Wood/Oak/Oak_BaseColor.png",
+    #             f"{NVIDIA_NUCLEUS_DIR}/Materials/Base/Wood/Plywood/Plywood_BaseColor.png",
+    #             f"{NVIDIA_NUCLEUS_DIR}/Materials/Base/Wood/Timber/Timber_BaseColor.png",
+    #             f"{NVIDIA_NUCLEUS_DIR}/Materials/Base/Wood/Timber_Cladding/Timber_Cladding_BaseColor.png",
+    #             f"{NVIDIA_NUCLEUS_DIR}/Materials/Base/Wood/Walnut_Planks/Walnut_Planks_BaseColor.png",
+    #             f"{NVIDIA_NUCLEUS_DIR}/Materials/Base/Stone/Marble/Marble_BaseColor.png",
+    #             f"{NVIDIA_NUCLEUS_DIR}/Materials/Base/Metals/Steel_Stainless/Steel_Stainless_BaseColor.png",
+    #         ],
+    #         "default_texture": (
+    #             f"{ISAAC_NUCLEUS_DIR}/Props/Mounts/SeattleLabTable/Materials/Textures/DemoTable_TableBase_BaseColor.png"
+    #         ),
+    #     },
+    # )
+
+    # randomize_bin_visual_material = EventTerm(
+    #     func=randomize_utils.randomize_visual_texture_material,
+    #     mode="reset",
+    #     params={
+    #         "asset_cfg": SceneEntityCfg("bin"),
     #         "textures": [
     #             f"{NVIDIA_NUCLEUS_DIR}/Materials/Base/Wood/Ash/Ash_BaseColor.png",
     #             f"{NVIDIA_NUCLEUS_DIR}/Materials/Base/Wood/Bamboo_Planks/Bamboo_Planks_BaseColor.png",
@@ -283,15 +331,32 @@ class EventCfg:
     #     },
     # )
 
-    # reset_object_position = EventTerm(
-    #     func=mdp.reset_root_state_uniform,
-    #     mode="reset",
-    #     params={
-    #         "pose_range": {"x": (-0.1, 0.1), "y": (-0.25, 0.25), "z": (0.0, 0.0)},
-    #         "velocity_range": {},
-    #         "asset_cfg": SceneEntityCfg("object", body_names="Object"),
-    #     },
-    # )
+    randomize_bin_position = EventTerm(
+        func=mdp.reset_root_state_uniform,
+        mode="reset",
+        params={
+            "pose_range": {"x": (-0.15, 0.15), "y": (-0.1, 0.2), "yaw": (-3.14, 3.14)},
+            "velocity_range": {},
+            "asset_cfg": SceneEntityCfg("bin"),
+        },
+    )
+
+    randomize_cube_position = EventTerm(
+        func=mdp.reset_root_state_uniform,
+        mode="reset",
+        params={
+            "pose_range": {"x": (-0.15, 0.15), "y": (-0.2, 0.1), "yaw": (-3.14, 3.14)},
+            "velocity_range": {},
+            "asset_cfg": SceneEntityCfg("cube"),
+        },
+    )
+
+
+@configclass
+class TerminationsCfg:
+    """Termination terms for the MDP."""
+
+    time_out = DoneTerm(func=mdp.time_out, time_out=True)
 
 
 ##
@@ -304,25 +369,28 @@ class LiftEnvCfg(ManagerBasedRLEnvCfg):
     """Configuration for the lifting environment."""
 
     # Scene settings
-    scene: ObjectTableSceneCfg = ObjectTableSceneCfg(num_envs=4096, env_spacing=2.5)
+    scene: ObjectTableSceneCfg = ObjectTableSceneCfg(num_envs=1, env_spacing=2.5, replicate_physics=False)
     # Basic settings
     observations: ObservationsCfg = ObservationsCfg()
     actions: ActionsCfg = ActionsCfg()
 
     # MDP settings
     events: EventCfg = EventCfg()
+    terminations: TerminationsCfg = TerminationsCfg()
 
     # Unused managers
     commands = None
     rewards = None
-    terminations = None
     curriculum = None
+
+    # Prompt for the openpi policy.
+    prompt: str = "Pick up the blue cube and drop it in the bin" #MISSING
 
     def __post_init__(self):
         """Post initialization."""
         # general settings
-        self.decimation = 2
-        self.episode_length_s = 10.0
+        self.decimation = 5
+        self.episode_length_s = 100.0
         # simulation settings
         self.sim.dt = 0.01  # 100Hz
         self.sim.render_interval = self.decimation
@@ -336,3 +404,19 @@ class LiftEnvCfg(ManagerBasedRLEnvCfg):
         # Set settings for camera rendering
         self.num_rerenders_on_reset = 3
         self.sim.render.antialiasing_mode = "DLAA"  # Use DLAA for higher quality rendering
+
+    def get_ep_meta(self):
+        ep_meta = dict()
+
+        # Add basic episode metadata
+        ep_meta["sim_args"] = {
+            "dt": self.sim.dt,
+            "decimation": self.decimation,
+            "render_interval": self.sim.render_interval,
+            "num_envs": self.scene.num_envs,
+        }
+
+        # Add prompt
+        ep_meta['prompt'] = self.prompt
+
+        return ep_meta

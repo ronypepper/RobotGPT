@@ -19,10 +19,9 @@ parser.add_argument(
 parser.add_argument("--task", type=str, default=None, help="Name of the task.")
 
 # openpi-specific arguments
-parser.add_argument("--prompt", type=str, default=None, help="Prompt for the policy.")
 parser.add_argument("--num_rollouts", type=int, default=10, help="Number of rollouts to perform.")
 parser.add_argument("--max_timesteps", type=int, default=0, help="Maximum number of timesteps to take. 0 means infinite.")
-parser.add_argument("--open_loop_horizon", type=int, default=8, help="Number of actions to execute from a prediction before re-querying the policy.")
+parser.add_argument("--open_loop_horizon", type=int, default=16, help="Number of actions to execute from a prediction before re-querying the policy.")
 parser.add_argument("--remote_host", type=str, default="0.0.0.0", help="IP address of the policy server.")
 parser.add_argument("--remote_port", type=int, default=8000, help="Port of the policy server.")
 parser.add_argument("--save_video", type=bool, default=False, help="If the table cam video should be saved to disk.")
@@ -60,8 +59,6 @@ from isaaclab_tasks.utils import parse_env_cfg
 
 def main():
     """"OpenPi client for Isaac Lab environment."""
-    if args_cli.prompt is None:
-        raise ValueError("No prompt has been specified.")
     if args_cli.num_rollouts <= 0:
         raise ValueError("num_rollouts must be greater than 0.")
 
@@ -72,6 +69,11 @@ def main():
     # create environment
     print("[INFO]: Creating environment.")
     env = gym.make(args_cli.task, cfg=env_cfg)
+
+    # Check if prompt has been specified
+    if not hasattr(env_cfg, "prompt"):
+        raise ValueError("No prompt has been specified in the environment.")
+    print(f"[INFO]: Prompt: {env_cfg.prompt}")
 
     # print info (this is vectorized environment)
     print(f"[INFO]: Gym observation space: {env.observation_space}")
@@ -130,7 +132,7 @@ def main():
                         actions_from_chunk_completed = 0
 
                         # Transform observation data to format expected by policy server
-                        policy_server_obs = franka_to_droid_obs(obs)
+                        policy_server_obs = franka_to_droid_obs(obs, env_cfg.prompt)
 
                         # Wrap the server call in a context manager to prevent Ctrl+C from interrupting it
                         # Ctrl+C will be handled after the server call is complete
@@ -233,7 +235,40 @@ def extract_numpy_observation(env_obs: dict):
     }
     return obs
 
-def franka_to_droid_obs(obs: dict):
+def franka_to_droid_obs(obs: dict, prompt: str):
+    # Pi0 models are trained for gripper positions in [0.0, 1.0], with 0.0 corresponding to fully open and 1.0 corresponding to fully closed.
+    # Observations in the dataset are in [0.0, 0.04], with 0.0 corresponding to fully closed and 0.04 corresponding to fully open.
+    # Therefore we adjust the gripper observation to fit the Pi0 models' format.
+    # For received actions (later), we don't need to do the reverse transformation since the environment expects this format for the gripper action as well.
+    # Proprioceptive state normalization is handled on the server side.
+    state_obs = obs["joint_pos"][:8] # 7 joints + 1 gripper
+    joint_pos_obs = state_obs[0:7]
+    gripper_obs = (state_obs[7:8] - 0.04) / 0.04
+    state_obs = np.concatenate((joint_pos_obs, gripper_obs))
+    policy_server_obs = {
+        "observation/table_img": obs["table_img"],
+        "observation/wrist_img": obs["wrist_img"],
+        "observation/joint_pos": state_obs,
+        "prompt": prompt,
+    }
+    return policy_server_obs
+
+# def franka_to_droid_obs(obs: dict, prompt: str):
+#     # Resize images here to minimize the amount of data sent to the policy server and improve latency.
+#     # Proprioceptive state normalization is handled on the server side.
+#     policy_server_obs = {
+#         "observation/table_img": image_tools.convert_to_uint8(
+#             image_tools.resize_with_pad(obs["table_img"], 224, 224)
+#         ),
+#         "observation/wrist_img": image_tools.convert_to_uint8(
+#             image_tools.resize_with_pad(obs["wrist_img"], 224, 224)
+#         ),
+#         "observation/joint_pos": obs["joint_pos"][:8], # 7 joints + 1 gripper
+#         "prompt": prompt,
+#     }
+#     return policy_server_obs
+
+def polaris_franka_to_droid_obs(obs: dict, prompt: str):
     # Resize images here to minimize the amount of data sent to the policy server and improve latency.
     # Proprioceptive state normalization is handled on the server side.
     policy_server_obs = {
@@ -243,9 +278,9 @@ def franka_to_droid_obs(obs: dict):
         "observation/wrist_image_left": image_tools.convert_to_uint8(
             image_tools.resize_with_pad(obs["wrist_img"], 224, 224)
         ),
-        "observation/joint_position": obs["joint_pos"][:7],
-        "observation/gripper_position": obs["joint_pos"][8],
-        "prompt": args_cli.prompt,
+        "observation/joint_position": obs["joint_pos"][:7], # 7 joints
+        "observation/gripper_position": obs["joint_pos"][7],# 1 gripper
+        "prompt": prompt,
     }
     return policy_server_obs
 

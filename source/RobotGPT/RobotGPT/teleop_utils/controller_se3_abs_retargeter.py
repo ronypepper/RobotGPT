@@ -34,7 +34,9 @@ class ControllerSe3AbsRetargeter(RetargeterBase):
         """Initialize the retargeter.
 
         Args:
-            bound_controller: The hand to track (DeviceBase.TrackingTarget.CONTROLLER_LEFT or DeviceBase.TrackingTarget.CONTROLLER_RIGHT)
+            pos_offset: An offset applied to the tracked controller position in world frame
+            rot_offset: An offset applied to the tracked controller rotation in degrees (z, y, x)
+            bound_controller: The controller to track (DeviceBase.TrackingTarget.CONTROLLER_LEFT or DeviceBase.TrackingTarget.CONTROLLER_RIGHT)
             zero_out_xy_rotation: If True, zero out rotation around x and y axes
             enable_visualization: If True, visualize the target pose in the scene
             device: The device to place the returned tensor on ('cpu' or 'cuda')
@@ -45,7 +47,8 @@ class ControllerSe3AbsRetargeter(RetargeterBase):
                 "bound_controller must be either DeviceBase.TrackingTarget.CONTROLLER_LEFT or DeviceBase.TrackingTarget.CONTROLLER_RIGHT"
             )
         self.bound_controller = cfg.bound_controller
-
+        self.pos_offset = np.array(cfg.pos_offset)
+        self.rot_offset = Rotation.from_euler("ZYX", cfg.rot_offset, degrees=True)
         self._zero_out_xy_rotation = cfg.zero_out_xy_rotation
 
         # Initialize visualization if enabled
@@ -78,18 +81,35 @@ class ControllerSe3AbsRetargeter(RetargeterBase):
                 ee_position = ee_pose[0:3]
                 ee_rotation = ee_pose[3:]
 
-        if self._zero_out_xy_rotation:
-            # ee_rotation is w,x,y,z but scipy expects x,y,z,w
-            ee_rotation = Rotation.from_quat([*ee_rotation[1:], ee_rotation[0]])
+        # Apply frame offsets
+        ee_position += self.pos_offset
 
+        # ee_rotation is w,x,y,z but scipy expects x,y,z,w
+        ee_rotation = Rotation.from_quat([*ee_rotation[1:], ee_rotation[0]])
+        ee_rotation = ee_rotation * self.rot_offset
+
+        # # Helper code for figuring out rotation offsets easily via controller inputs
+        # # comment out "ee_rotation = ee_rotation * self.rot_offset" above when using
+        # if DeviceBase.TrackingTarget.CONTROLLER_RIGHT in data and DeviceBase.TrackingTarget.CONTROLLER_LEFT in data:
+        #     if data[DeviceBase.TrackingTarget.CONTROLLER_RIGHT] is not None and data[DeviceBase.TrackingTarget.CONTROLLER_LEFT] is not None:
+        #         rx = data[DeviceBase.TrackingTarget.CONTROLLER_LEFT][1][0] * 90.0
+        #         ry = data[DeviceBase.TrackingTarget.CONTROLLER_LEFT][1][2] * 90.0
+        #         ry -= data[DeviceBase.TrackingTarget.CONTROLLER_LEFT][1][3] * 90.0
+        #         rz = data[DeviceBase.TrackingTarget.CONTROLLER_RIGHT][1][0] * 90.0
+        #         #rx: 88.86013627052307, ry: -90.0, rz: 0.0
+        #         print(f"rx: {rx}, ry: {ry}, rz: {rz}")
+        #         rr = Rotation.from_euler("ZYX", [rz, ry, rx], degrees=True)
+        #         ee_rotation = ee_rotation * rr
+
+        if self._zero_out_xy_rotation:
             z, y, x = ee_rotation.as_euler("ZYX")
             y = 0.0  # Zero out rotation around y-axis
             x = 0.0  # Zero out rotation around x-axis
             ee_rotation = Rotation.from_euler("ZYX", [z, y, x]) * Rotation.from_euler("X", np.pi, degrees=False)
 
-            # Convert back to w,x,y,z format
-            ee_rotation = ee_rotation.as_quat()
-            ee_rotation = np.array([ee_rotation[3], ee_rotation[0], ee_rotation[1], ee_rotation[2]])  # Output remains w,x,y,z
+        # Convert back to w,x,y,z format
+        ee_rotation = ee_rotation.as_quat()
+        ee_rotation = np.array([ee_rotation[3], ee_rotation[0], ee_rotation[1], ee_rotation[2]])  # Output remains w,x,y,z
 
         # Update visualization if enabled
         if self._enable_visualization:
@@ -174,8 +194,10 @@ class ControllerSe3AbsRetargeter(RetargeterBase):
 
 @dataclass
 class ControllerSe3AbsRetargeterCfg(RetargeterCfg):
-    """Configuration for absolute position retargeter."""
+    """Configuration for absolute position controller retargeter."""
 
+    pos_offset: tuple[float, float, float] = (0.0, 0.0, 0.0)
+    rot_offset: tuple[float, float, float] = (0.0, 0.0, 0.0)
     zero_out_xy_rotation: bool = True
     enable_visualization: bool = False
     bound_controller: DeviceBase.TrackingTarget = DeviceBase.TrackingTarget.CONTROLLER_RIGHT

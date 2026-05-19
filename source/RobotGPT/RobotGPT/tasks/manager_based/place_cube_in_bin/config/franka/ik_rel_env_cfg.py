@@ -9,7 +9,7 @@ from isaaclab.controllers.differential_ik_cfg import DifferentialIKControllerCfg
 from isaaclab.devices.device_base import DeviceBase, DevicesCfg
 from isaaclab.devices.openxr.openxr_device import OpenXRDeviceCfg, XrCfg
 from isaaclab.devices.openxr.retargeters.manipulator.gripper_retargeter import GripperRetargeterCfg
-from isaaclab.devices.openxr.retargeters.manipulator.se3_abs_retargeter import Se3AbsRetargeterCfg
+from isaaclab.devices.openxr.retargeters.manipulator.se3_rel_retargeter import Se3RelRetargeterCfg
 from isaaclab.managers import EventTermCfg as EventTerm
 from isaaclab.managers import SceneEntityCfg
 from isaaclab.sim.spawners import UsdFileCfg
@@ -17,7 +17,7 @@ from isaaclab.utils import configclass
 from isaaclab.utils.assets import ISAACLAB_NUCLEUS_DIR
 
 from RobotGPT.teleop_utils.controller_gripper_retargeter import ControllerGripperRetargeterCfg
-from RobotGPT.teleop_utils.controller_se3_abs_retargeter import ControllerSe3AbsRetargeterCfg
+from RobotGPT.teleop_utils.controller_se3_rel_retargeter import ControllerSe3RelRetargeterCfg
 from RobotGPT.teleop_utils.demo_recorder_openxr_device import DemoRecorderOpenXRDeviceCfg
 from RobotGPT.teleop_utils.teleop_diff_ik_action import TeleopDifferentialInverseKinematicsActionCfg
 
@@ -60,7 +60,7 @@ class FrankaCubeLiftEnvCfg(joint_pos_env_cfg.FrankaCubeLiftEnvCfg):
             asset_name="robot",
             joint_names=["panda_joint.*"],
             body_name="panda_hand",
-            controller=DifferentialIKControllerCfg(command_type="pose", use_relative_mode=False, ik_method="dls"),
+            controller=DifferentialIKControllerCfg(command_type="pose", use_relative_mode=True, ik_method="dls"),
             body_offset=TeleopDifferentialInverseKinematicsActionCfg.OffsetCfg(pos=(0.0, 0.0, 0.107)),
         )
         self.actions.gripper_action = mdp.JointPositionActionCfg(
@@ -80,11 +80,13 @@ class FrankaCubeLiftEnvCfg(joint_pos_env_cfg.FrankaCubeLiftEnvCfg):
             devices={
                 "handtracking": OpenXRDeviceCfg(
                     retargeters=[
-                        Se3AbsRetargeterCfg(
+                        Se3RelRetargeterCfg(
                             bound_hand=DeviceBase.TrackingTarget.HAND_RIGHT,
                             zero_out_xy_rotation=True,
                             use_wrist_rotation=False,
                             use_wrist_position=True,
+                            delta_pos_scale_factor=10.0,
+                            delta_rot_scale_factor=10.0,
                             sim_device=self.sim.device,
                         ),
                         GripperRetargeterCfg(
@@ -99,11 +101,11 @@ class FrankaCubeLiftEnvCfg(joint_pos_env_cfg.FrankaCubeLiftEnvCfg):
                 ),
                 "motioncontroller": DemoRecorderOpenXRDeviceCfg(
                     retargeters=[
-                        ControllerSe3AbsRetargeterCfg(
+                        ControllerSe3RelRetargeterCfg(
                             bound_controller=DeviceBase.TrackingTarget.CONTROLLER_RIGHT,
-                            pos_offset=(-0.3, 0.0, 0.0),
-                            rot_offset=(0.0, -90.0, 90.0),
-                            zero_out_xy_rotation=True,
+                            zero_out_xy_rotation=False,
+                            delta_pos_scale_factor=10.0,
+                            delta_rot_scale_factor=10.0,
                             sim_device=self.sim.device,
                         ),
                         ControllerGripperRetargeterCfg(

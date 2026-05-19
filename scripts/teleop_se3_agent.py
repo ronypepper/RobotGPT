@@ -78,7 +78,7 @@ if args_cli.enable_pinocchio:
     import isaaclab_tasks.manager_based.locomanipulation.pick_place  # noqa: F401
     import isaaclab_tasks.manager_based.manipulation.pick_place  # noqa: F401
 
-import RobotGPT.tasks
+import RobotGPT.tasks  # noqa: F401
 
 # import logger
 logger = logging.getLogger(__name__)
@@ -104,7 +104,8 @@ def main() -> None:
         )
 
     if args_cli.xr:
-        env_cfg = remove_camera_configs(env_cfg)
+        if not args_cli.enable_cameras:
+            env_cfg = remove_camera_configs(env_cfg)
         env_cfg.sim.render.antialiasing_mode = "DLSS"
 
     try:
