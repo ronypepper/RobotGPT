@@ -1,5 +1,12 @@
+# Based on code from the Isaac Lab project:
+# https://github.com/isaac-sim/IsaacLab
+#
+# Original work:
 # Copyright (c) 2022-2026, The Isaac Lab Project Developers (https://github.com/isaac-sim/IsaacLab/blob/main/CONTRIBUTORS.md).
 # All rights reserved.
+#
+# Modifications:
+# Copyright (c) 2026 ronypepper.
 #
 # SPDX-License-Identifier: BSD-3-Clause
 
@@ -19,7 +26,7 @@ from openpi_client.image_tools import convert_to_uint8, resize_with_pad
 from isaaclab.envs.mdp import image
 
 
-def image_openpi(
+def image_converted_for_openpi(
     env: ManagerBasedEnv,
     sensor_cfg: SceneEntityCfg = SceneEntityCfg("tiled_camera"),
     data_type: str = "rgb",

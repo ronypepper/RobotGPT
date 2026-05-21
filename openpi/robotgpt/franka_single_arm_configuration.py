@@ -1,3 +1,9 @@
+"""
+Interface and training configurations for single-arm Franka setups in RobotGPT.
+
+Based on code from the openpi repository: https://github.com/Physical-Intelligence/openpi
+"""
+
 import dataclasses
 import pathlib
 

@@ -1,5 +1,12 @@
+# Based on code from the Isaac Lab project:
+# https://github.com/isaac-sim/IsaacLab
+#
+# Original work:
 # Copyright (c) 2022-2026, The Isaac Lab Project Developers (https://github.com/isaac-sim/IsaacLab/blob/main/CONTRIBUTORS.md).
 # All rights reserved.
+#
+# Modifications:
+# Copyright (c) 2026 ronypepper.
 #
 # SPDX-License-Identifier: BSD-3-Clause
 
@@ -22,8 +29,8 @@ from isaaclab.utils import configclass
 from isaaclab.utils.assets import ISAAC_NUCLEUS_DIR, NVIDIA_NUCLEUS_DIR
 
 import RobotGPT.tasks.manager_based.place_cube_in_bin.randomize_utils as randomize_utils
-from RobotGPT.teleop_utils.image_openpi_observation import image_openpi
-from RobotGPT.teleop_utils.teleop_diff_ik_action import TeleopDifferentialInverseKinematicsActionCfg
+from RobotGPT.utils.mdp.env_step_differential_ik_action import EnvStepDifferentialInverseKinematicsActionCfg
+from RobotGPT.utils.mdp.image_converted_for_openpi import image_converted_for_openpi
 
 ##
 # Scene definition
@@ -32,9 +39,9 @@ from RobotGPT.teleop_utils.teleop_diff_ik_action import TeleopDifferentialInvers
 
 @configclass
 class ObjectTableSceneCfg(InteractiveSceneCfg):
-    """Configuration for the lift scene with a robot and a object.
+    """Configuration for the place cube in bin scene.
     This is the abstract base implementation, the exact scene is defined in the derived classes
-    which need to set the target object, robot and end-effector frames
+    which need to set the robot, as well as prim paths to the wrist camera mounts.
     """
 
     # robots: will be populated by agent env cfg
@@ -174,7 +181,7 @@ class ActionsCfg:
     """Action specifications for the MDP."""
 
     # will be set by agent env cfg
-    arm_action: mdp.JointPositionActionCfg | mdp.JointVelocityActionCfg | mdp.DifferentialInverseKinematicsActionCfg | TeleopDifferentialInverseKinematicsActionCfg = MISSING
+    arm_action: mdp.JointPositionActionCfg | mdp.JointVelocityActionCfg | mdp.DifferentialInverseKinematicsActionCfg | EnvStepDifferentialInverseKinematicsActionCfg = MISSING
     gripper_action: mdp.JointPositionActionCfg | mdp.BinaryJointPositionActionCfg = MISSING
 
 
@@ -188,10 +195,10 @@ class ObservationsCfg:
 
         joint_pos = ObsTerm(func=mdp.joint_pos)
         table_img = ObsTerm(
-            func=image_openpi, params={"sensor_cfg": SceneEntityCfg("table_cam"), "data_type": "rgb", "normalize": False}
+            func=image_converted_for_openpi, params={"sensor_cfg": SceneEntityCfg("table_cam"), "data_type": "rgb", "normalize": False}
         )
         wrist_img = ObsTerm(
-            func=image_openpi, params={"sensor_cfg": SceneEntityCfg("wrist_cam"), "data_type": "rgb", "normalize": False}
+            func=image_converted_for_openpi, params={"sensor_cfg": SceneEntityCfg("wrist_cam"), "data_type": "rgb", "normalize": False}
         )
 
         def __post_init__(self):
@@ -207,6 +214,26 @@ class EventCfg:
     """Configuration for events."""
 
     reset_all = EventTerm(func=mdp.reset_scene_to_default, mode="reset")
+
+    randomize_bin_position = EventTerm(
+        func=mdp.reset_root_state_uniform,
+        mode="reset",
+        params={
+            "pose_range": {"x": (-0.15, 0.15), "y": (-0.1, 0.2), "yaw": (-3.14, 3.14)},
+            "velocity_range": {},
+            "asset_cfg": SceneEntityCfg("bin"),
+        },
+    )
+
+    randomize_cube_position = EventTerm(
+        func=mdp.reset_root_state_uniform,
+        mode="reset",
+        params={
+            "pose_range": {"x": (-0.15, 0.15), "y": (-0.2, 0.1), "yaw": (-3.14, 3.14)},
+            "velocity_range": {},
+            "asset_cfg": SceneEntityCfg("cube"),
+        },
+    )
 
     randomize_light = EventTerm(
         func=randomize_utils.randomize_scene_lighting_domelight,
@@ -233,124 +260,6 @@ class EventCfg:
         },
     )
 
-    # randomize_table_visual_material = EventTerm(
-    #     func=randomize_utils.randomize_visual_texture_material,
-    #     mode="reset",
-    #     params={
-    #         "asset_cfg": SceneEntityCfg("table"),
-    #         "textures": [
-    #             f"{NVIDIA_NUCLEUS_DIR}/Materials/Base/Wood/Ash/Ash_BaseColor.png",
-    #             f"{NVIDIA_NUCLEUS_DIR}/Materials/Base/Wood/Bamboo_Planks/Bamboo_Planks_BaseColor.png",
-    #             f"{NVIDIA_NUCLEUS_DIR}/Materials/Base/Wood/Birch/Birch_BaseColor.png",
-    #             f"{NVIDIA_NUCLEUS_DIR}/Materials/Base/Wood/Cherry/Cherry_BaseColor.png",
-    #             f"{NVIDIA_NUCLEUS_DIR}/Materials/Base/Wood/Mahogany_Planks/Mahogany_Planks_BaseColor.png",
-    #             f"{NVIDIA_NUCLEUS_DIR}/Materials/Base/Wood/Oak/Oak_BaseColor.png",
-    #             f"{NVIDIA_NUCLEUS_DIR}/Materials/Base/Wood/Plywood/Plywood_BaseColor.png",
-    #             f"{NVIDIA_NUCLEUS_DIR}/Materials/Base/Wood/Timber/Timber_BaseColor.png",
-    #             f"{NVIDIA_NUCLEUS_DIR}/Materials/Base/Wood/Timber_Cladding/Timber_Cladding_BaseColor.png",
-    #             f"{NVIDIA_NUCLEUS_DIR}/Materials/Base/Wood/Walnut_Planks/Walnut_Planks_BaseColor.png",
-    #             f"{NVIDIA_NUCLEUS_DIR}/Materials/Base/Stone/Marble/Marble_BaseColor.png",
-    #             f"{NVIDIA_NUCLEUS_DIR}/Materials/Base/Metals/Steel_Stainless/Steel_Stainless_BaseColor.png",
-    #         ],
-    #         "default_texture": (
-    #             f"{ISAAC_NUCLEUS_DIR}/Props/Mounts/SeattleLabTable/Materials/Textures/DemoTable_TableBase_BaseColor.png"
-    #         ),
-    #     },
-    # )
-
-    # randomize_cube_visual_material = EventTerm(
-    #     func=randomize_utils.randomize_visual_texture_material,
-    #     mode="reset",
-    #     params={
-    #         "asset_cfg": SceneEntityCfg("cube"),
-    #         "textures": [
-    #             f"{NVIDIA_NUCLEUS_DIR}/Materials/Base/Wood/Ash/Ash_BaseColor.png",
-    #             f"{NVIDIA_NUCLEUS_DIR}/Materials/Base/Wood/Bamboo_Planks/Bamboo_Planks_BaseColor.png",
-    #             f"{NVIDIA_NUCLEUS_DIR}/Materials/Base/Wood/Birch/Birch_BaseColor.png",
-    #             f"{NVIDIA_NUCLEUS_DIR}/Materials/Base/Wood/Cherry/Cherry_BaseColor.png",
-    #             f"{NVIDIA_NUCLEUS_DIR}/Materials/Base/Wood/Mahogany_Planks/Mahogany_Planks_BaseColor.png",
-    #             f"{NVIDIA_NUCLEUS_DIR}/Materials/Base/Wood/Oak/Oak_BaseColor.png",
-    #             f"{NVIDIA_NUCLEUS_DIR}/Materials/Base/Wood/Plywood/Plywood_BaseColor.png",
-    #             f"{NVIDIA_NUCLEUS_DIR}/Materials/Base/Wood/Timber/Timber_BaseColor.png",
-    #             f"{NVIDIA_NUCLEUS_DIR}/Materials/Base/Wood/Timber_Cladding/Timber_Cladding_BaseColor.png",
-    #             f"{NVIDIA_NUCLEUS_DIR}/Materials/Base/Wood/Walnut_Planks/Walnut_Planks_BaseColor.png",
-    #             f"{NVIDIA_NUCLEUS_DIR}/Materials/Base/Stone/Marble/Marble_BaseColor.png",
-    #             f"{NVIDIA_NUCLEUS_DIR}/Materials/Base/Metals/Steel_Stainless/Steel_Stainless_BaseColor.png",
-    #         ],
-    #         "default_texture": (
-    #             f"{ISAAC_NUCLEUS_DIR}/Props/Mounts/SeattleLabTable/Materials/Textures/DemoTable_TableBase_BaseColor.png"
-    #         ),
-    #     },
-    # )
-
-    # randomize_bin_visual_material = EventTerm(
-    #     func=randomize_utils.randomize_visual_texture_material,
-    #     mode="reset",
-    #     params={
-    #         "asset_cfg": SceneEntityCfg("bin"),
-    #         "textures": [
-    #             f"{NVIDIA_NUCLEUS_DIR}/Materials/Base/Wood/Ash/Ash_BaseColor.png",
-    #             f"{NVIDIA_NUCLEUS_DIR}/Materials/Base/Wood/Bamboo_Planks/Bamboo_Planks_BaseColor.png",
-    #             f"{NVIDIA_NUCLEUS_DIR}/Materials/Base/Wood/Birch/Birch_BaseColor.png",
-    #             f"{NVIDIA_NUCLEUS_DIR}/Materials/Base/Wood/Cherry/Cherry_BaseColor.png",
-    #             f"{NVIDIA_NUCLEUS_DIR}/Materials/Base/Wood/Mahogany_Planks/Mahogany_Planks_BaseColor.png",
-    #             f"{NVIDIA_NUCLEUS_DIR}/Materials/Base/Wood/Oak/Oak_BaseColor.png",
-    #             f"{NVIDIA_NUCLEUS_DIR}/Materials/Base/Wood/Plywood/Plywood_BaseColor.png",
-    #             f"{NVIDIA_NUCLEUS_DIR}/Materials/Base/Wood/Timber/Timber_BaseColor.png",
-    #             f"{NVIDIA_NUCLEUS_DIR}/Materials/Base/Wood/Timber_Cladding/Timber_Cladding_BaseColor.png",
-    #             f"{NVIDIA_NUCLEUS_DIR}/Materials/Base/Wood/Walnut_Planks/Walnut_Planks_BaseColor.png",
-    #             f"{NVIDIA_NUCLEUS_DIR}/Materials/Base/Stone/Marble/Marble_BaseColor.png",
-    #             f"{NVIDIA_NUCLEUS_DIR}/Materials/Base/Metals/Steel_Stainless/Steel_Stainless_BaseColor.png",
-    #         ],
-    #         "default_texture": (
-    #             f"{ISAAC_NUCLEUS_DIR}/Props/Mounts/SeattleLabTable/Materials/Textures/DemoTable_TableBase_BaseColor.png"
-    #         ),
-    #     },
-    # )
-
-    # randomize_robot_arm_visual_texture = EventTerm(
-    #     func=franka_stack_events.randomize_visual_texture_material,
-    #     mode="reset",
-    #     params={
-    #         "asset_cfg": SceneEntityCfg("robot"),
-    #         "textures": [
-    #             f"{NVIDIA_NUCLEUS_DIR}/Materials/Base/Metals/Aluminum_Cast/Aluminum_Cast_BaseColor.png",
-    #             f"{NVIDIA_NUCLEUS_DIR}/Materials/Base/Metals/Aluminum_Polished/Aluminum_Polished_BaseColor.png",
-    #             f"{NVIDIA_NUCLEUS_DIR}/Materials/Base/Metals/Brass/Brass_BaseColor.png",
-    #             f"{NVIDIA_NUCLEUS_DIR}/Materials/Base/Metals/Bronze/Bronze_BaseColor.png",
-    #             f"{NVIDIA_NUCLEUS_DIR}/Materials/Base/Metals/Brushed_Antique_Copper/Brushed_Antique_Copper_BaseColor.png",
-    #             f"{NVIDIA_NUCLEUS_DIR}/Materials/Base/Metals/Cast_Metal_Silver_Vein/Cast_Metal_Silver_Vein_BaseColor.png",
-    #             f"{NVIDIA_NUCLEUS_DIR}/Materials/Base/Metals/Copper/Copper_BaseColor.png",
-    #             f"{NVIDIA_NUCLEUS_DIR}/Materials/Base/Metals/Gold/Gold_BaseColor.png",
-    #             f"{NVIDIA_NUCLEUS_DIR}/Materials/Base/Metals/Iron/Iron_BaseColor.png",
-    #             f"{NVIDIA_NUCLEUS_DIR}/Materials/Base/Metals/RustedMetal/RustedMetal_BaseColor.png",
-    #             f"{NVIDIA_NUCLEUS_DIR}/Materials/Base/Metals/Silver/Silver_BaseColor.png",
-    #             f"{NVIDIA_NUCLEUS_DIR}/Materials/Base/Metals/Steel_Carbon/Steel_Carbon_BaseColor.png",
-    #             f"{NVIDIA_NUCLEUS_DIR}/Materials/Base/Metals/Steel_Stainless/Steel_Stainless_BaseColor.png",
-    #         ],
-    #     },
-    # )
-
-    randomize_bin_position = EventTerm(
-        func=mdp.reset_root_state_uniform,
-        mode="reset",
-        params={
-            "pose_range": {"x": (-0.15, 0.15), "y": (-0.1, 0.2), "yaw": (-3.14, 3.14)},
-            "velocity_range": {},
-            "asset_cfg": SceneEntityCfg("bin"),
-        },
-    )
-
-    randomize_cube_position = EventTerm(
-        func=mdp.reset_root_state_uniform,
-        mode="reset",
-        params={
-            "pose_range": {"x": (-0.15, 0.15), "y": (-0.2, 0.1), "yaw": (-3.14, 3.14)},
-            "velocity_range": {},
-            "asset_cfg": SceneEntityCfg("cube"),
-        },
-    )
-
 
 @configclass
 class TerminationsCfg:
@@ -365,8 +274,8 @@ class TerminationsCfg:
 
 
 @configclass
-class LiftEnvCfg(ManagerBasedRLEnvCfg):
-    """Configuration for the lifting environment."""
+class PlaceCubeInBinEnvCfg(ManagerBasedRLEnvCfg):
+    """Configuration for the place cube in bin environment."""
 
     # Scene settings
     scene: ObjectTableSceneCfg = ObjectTableSceneCfg(num_envs=1, env_spacing=2.5, replicate_physics=False)
@@ -390,7 +299,7 @@ class LiftEnvCfg(ManagerBasedRLEnvCfg):
         """Post initialization."""
         # general settings
         self.decimation = 5
-        self.episode_length_s = 100.0
+        self.episode_length_s = 30.0
         # simulation settings
         self.sim.dt = 0.01  # 100Hz
         self.sim.render_interval = self.decimation
@@ -404,6 +313,8 @@ class LiftEnvCfg(ManagerBasedRLEnvCfg):
         # Set settings for camera rendering
         self.num_rerenders_on_reset = 3
         self.sim.render.antialiasing_mode = "DLAA"  # Use DLAA for higher quality rendering
+
+        self.viewer.eye = (2.0, 1.8, 1.5)
 
     def get_ep_meta(self):
         ep_meta = dict()

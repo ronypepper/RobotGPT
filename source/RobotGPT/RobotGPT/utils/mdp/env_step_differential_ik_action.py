@@ -1,5 +1,12 @@
+# Based on code from the Isaac Lab project:
+# https://github.com/isaac-sim/IsaacLab
+#
+# Original work:
 # Copyright (c) 2022-2026, The Isaac Lab Project Developers (https://github.com/isaac-sim/IsaacLab/blob/main/CONTRIBUTORS.md).
 # All rights reserved.
+#
+# Modifications:
+# Copyright (c) 2026 ronypepper.
 #
 # SPDX-License-Identifier: BSD-3-Clause
 
@@ -28,7 +35,7 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
-class TeleopDifferentialInverseKinematicsAction(ActionTerm):
+class EnvStepDifferentialInverseKinematicsAction(ActionTerm):
     r"""Inverse Kinematics action term.
 
     This action term performs pre-processing of the raw actions using scaling transformation.
@@ -42,7 +49,7 @@ class TeleopDifferentialInverseKinematicsAction(ActionTerm):
     and \text{joint position} is the desired joint position command for the articulation's joints.
     """
 
-    cfg: TeleopDifferentialInverseKinematicsActionCfg
+    cfg: EnvStepDifferentialInverseKinematicsActionCfg
     """The configuration of the action term."""
     _asset: Articulation
     """The articulation asset on which the action term is applied."""
@@ -51,7 +58,7 @@ class TeleopDifferentialInverseKinematicsAction(ActionTerm):
     _clip: torch.Tensor
     """The clip applied to the input action."""
 
-    def __init__(self, cfg: TeleopDifferentialInverseKinematicsActionCfg, env: ManagerBasedEnv):
+    def __init__(self, cfg: EnvStepDifferentialInverseKinematicsActionCfg, env: ManagerBasedEnv):
         # initialize the action term
         super().__init__(cfg, env)
 
@@ -265,7 +272,7 @@ class TeleopDifferentialInverseKinematicsAction(ActionTerm):
 
 
 @configclass
-class TeleopDifferentialInverseKinematicsActionCfg(ActionTermCfg):
+class EnvStepDifferentialInverseKinematicsActionCfg(ActionTermCfg):
     """Configuration for inverse differential kinematics action term.
 
     See :class:`DifferentialInverseKinematicsAction` for more details.
@@ -286,7 +293,7 @@ class TeleopDifferentialInverseKinematicsActionCfg(ActionTermCfg):
         rot: tuple[float, float, float, float] = (1.0, 0.0, 0.0, 0.0)
         """Quaternion rotation ``(w, x, y, z)`` w.r.t. the parent frame. Defaults to (1.0, 0.0, 0.0, 0.0)."""
 
-    class_type: type[ActionTerm] = TeleopDifferentialInverseKinematicsAction
+    class_type: type[ActionTerm] = EnvStepDifferentialInverseKinematicsAction
 
     joint_names: list[str] = MISSING
     """List of joint names or regex expressions that the action will be mapped to."""

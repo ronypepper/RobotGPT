@@ -1,5 +1,12 @@
+# Based on code from the Isaac Lab project:
+# https://github.com/isaac-sim/IsaacLab
+#
+# Original work:
 # Copyright (c) 2022-2026, The Isaac Lab Project Developers (https://github.com/isaac-sim/IsaacLab/blob/main/CONTRIBUTORS.md).
 # All rights reserved.
+#
+# Modifications:
+# Copyright (c) 2026 ronypepper.
 #
 # SPDX-License-Identifier: BSD-3-Clause
 
@@ -10,7 +17,7 @@ from isaaclab.sim.spawners.from_files.from_files_cfg import UsdFileCfg
 from isaaclab.utils import configclass
 from isaaclab.utils.assets import ISAAC_NUCLEUS_DIR
 
-from RobotGPT.tasks.manager_based.place_cube_in_bin.lift_env_cfg import LiftEnvCfg
+from RobotGPT.tasks.manager_based.place_cube_in_bin.place_cube_in_bin_env_cfg import PlaceCubeInBinEnvCfg
 
 ##
 # Pre-defined configs
@@ -20,7 +27,7 @@ from isaaclab_assets.robots.franka import FRANKA_PANDA_CFG  # isort: skip
 
 
 @configclass
-class FrankaCubeLiftEnvCfg(LiftEnvCfg):
+class FrankaSingleArmPlaceCubeInBinEnvCfg(PlaceCubeInBinEnvCfg):
     def __post_init__(self):
         # post init of parent
         super().__post_init__()
@@ -74,15 +81,3 @@ class FrankaCubeLiftEnvCfg(LiftEnvCfg):
         #         ),
         #     ],
         # )
-
-
-@configclass
-class FrankaCubeLiftEnvCfg_PLAY(FrankaCubeLiftEnvCfg):
-    def __post_init__(self):
-        # post init of parent
-        super().__post_init__()
-        # make a smaller scene for play
-        self.scene.num_envs = 50
-        self.scene.env_spacing = 2.5
-        # disable randomization for play
-        self.observations.policy.enable_corruption = False

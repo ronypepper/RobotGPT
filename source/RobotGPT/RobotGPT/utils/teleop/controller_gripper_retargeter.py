@@ -1,7 +1,15 @@
+# Based on code from the Isaac Lab project:
+# https://github.com/isaac-sim/IsaacLab
+#
+# Original work:
 # Copyright (c) 2022-2026, The Isaac Lab Project Developers (https://github.com/isaac-sim/IsaacLab/blob/main/CONTRIBUTORS.md).
 # All rights reserved.
 #
+# Modifications:
+# Copyright (c) 2026 ronypepper.
+#
 # SPDX-License-Identifier: BSD-3-Clause
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -12,17 +20,18 @@ from isaaclab.devices.device_base import DeviceBase
 from isaaclab.devices.retargeter_base import RetargeterBase, RetargeterCfg
 
 
-class ControllerInputRetargeter(RetargeterBase):
+class ControllerGripperRetargeter(RetargeterBase):
     """
-    Retargeter that returns input from the controller.
+    Retargeter specifically for gripper control based on controller tracking data.
+    Analog trigger on controller directly commands gripper.
     """
 
     def __init__(
         self,
-        cfg: ControllerInputRetargeterCfg,
+        cfg: ControllerGripperRetargeterCfg,
     ):
         super().__init__(cfg)
-        """Initialize the input retargeter."""
+        """Initialize the gripper retargeter."""
         # Store configuration
         if cfg.bound_controller not in [DeviceBase.TrackingTarget.CONTROLLER_LEFT, DeviceBase.TrackingTarget.CONTROLLER_RIGHT]:
             raise ValueError(
@@ -30,42 +39,40 @@ class ControllerInputRetargeter(RetargeterBase):
             )
         self.bound_controller = cfg.bound_controller
 
-        if cfg.input_selection is not DeviceBase.MotionControllerInputIndex:
-            raise ValueError(
-                "input_selection must be a member of DeviceBase.MotionControllerInputIndex"
-            )
-        self.input_selection = cfg.input_selection
+        if cfg.num_joints < 1:
+            raise ValueError("num_joints must be greater or equal to 1")
+        self.num_joints = cfg.num_joints
 
     def retarget(self, data: dict) -> torch.Tensor:
-        """Extract input from controller data.
+        """Convert controller data to gripper command.
 
         Args:
             data: Dictionary mapping tracking targets to joint data dictionaries.
 
         Returns:
-            torch.Tensor: Tensor containing a single scalar equal to the controller's selected input.
+            torch.Tensor: Tensor containing a single scalar representing gripper command where 1.0 = gripper closed, and 0.0 = gripper opened
         """
-        # Default controller input
-        controller_input = 0.0
+        # Default gripper command
+        gripper_command = 0.0
 
         # Get controller data
         if self.bound_controller in data and data[self.bound_controller] is not None:
             controller_data = data[self.bound_controller]
             if len(controller_data) > DeviceBase.MotionControllerDataRowIndex.INPUTS.value:
                 inputs = controller_data[DeviceBase.MotionControllerDataRowIndex.INPUTS.value]
-                if len(inputs) > self.input_selection.value:
-                    controller_input = inputs[self.input_selection.value]
+                if len(inputs) > DeviceBase.MotionControllerInputIndex.TRIGGER.value:
+                    gripper_command = inputs[DeviceBase.MotionControllerInputIndex.TRIGGER.value]
 
-        return torch.tensor(controller_input, dtype=torch.float32, device=self._sim_device)
+        return torch.tensor([gripper_command for _ in range(self.num_joints)], dtype=torch.float32, device=self._sim_device)
 
     def get_requirements(self) -> list[RetargeterBase.Requirement]:
         return [RetargeterBase.Requirement.MOTION_CONTROLLER]
 
 
 @dataclass
-class ControllerInputRetargeterCfg(RetargeterCfg):
-    """Configuration for input retargeter."""
+class ControllerGripperRetargeterCfg(RetargeterCfg):
+    """Configuration for gripper retargeter."""
 
     bound_controller: DeviceBase.TrackingTarget = DeviceBase.TrackingTarget.CONTROLLER_RIGHT
-    input_selection: DeviceBase.MotionControllerInputIndex = DeviceBase.MotionControllerInputIndex.BUTTON_0
-    retargeter_type: type[RetargeterBase] = ControllerInputRetargeter
+    num_joints: int = 1
+    retargeter_type: type[RetargeterBase] = ControllerGripperRetargeter

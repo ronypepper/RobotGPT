@@ -1,5 +1,12 @@
+# Based on code from the Isaac Lab project:
+# https://github.com/isaac-sim/IsaacLab
+#
+# Original work:
 # Copyright (c) 2022-2026, The Isaac Lab Project Developers (https://github.com/isaac-sim/IsaacLab/blob/main/CONTRIBUTORS.md).
 # All rights reserved.
+#
+# Modifications:
+# Copyright (c) 2026 ronypepper.
 #
 # SPDX-License-Identifier: BSD-3-Clause
 
@@ -17,6 +24,8 @@ parser.add_argument(
     "--disable_fabric", action="store_true", default=False, help="Disable fabric and use USD I/O operations."
 )
 parser.add_argument("--task", type=str, default=None, help="Name of the task.")
+parser.add_argument("--video", action="store_true", default=False, help="Record videos of the rollouts.")
+parser.add_argument("--video_obs", action="store_true", default=False, help="Record videos of the table and wrist camera observations.")
 
 # openpi-specific arguments
 parser.add_argument("--num_rollouts", type=int, default=10, help="Number of rollouts to perform.")
@@ -24,13 +33,30 @@ parser.add_argument("--max_timesteps", type=int, default=0, help="Maximum number
 parser.add_argument("--open_loop_horizon", type=int, default=16, help="Number of actions to execute from a prediction before re-querying the policy.")
 parser.add_argument("--remote_host", type=str, default="0.0.0.0", help="IP address of the policy server.")
 parser.add_argument("--remote_port", type=int, default=8000, help="Port of the policy server.")
-parser.add_argument("--save_video", type=bool, default=False, help="If the table cam video should be saved to disk.")
-parser.add_argument("--save_stats", type=bool, default=False, help="If results statistics should be saved to disk.")
+
+# logging-specific arguments
+parser.add_argument("--policy_name", type=str, default=None, help="Name of the policy.")
+parser.add_argument("--policy_checkpoint", type=int, default=None, help="Checkpoint number of the policy (== training steps).")
 
 # append AppLauncher cli args
 AppLauncher.add_app_launcher_args(parser)
 # parse the arguments
 args_cli = parser.parse_args()
+
+# enable_cameras needs to be on for the camera sensors
+args_cli.enable_cameras = True
+
+# arguments check
+if args_cli.task is None:
+    raise ValueError("task must be set.")
+if args_cli.policy_name is None:
+    raise ValueError("policy_name must be set.")
+if args_cli.policy_checkpoint is None:
+    raise ValueError("policy_name must be set.")
+if args_cli.num_rollouts <= 0:
+    raise ValueError("num_rollouts must be greater than 0.")
+
+
 
 # launch omniverse app
 app_launcher = AppLauncher(args_cli)
@@ -39,36 +65,106 @@ simulation_app = app_launcher.app
 """Rest everything follows."""
 
 import contextlib
-import datetime
 import os
 import signal
 from itertools import count
 
 import gymnasium as gym
 import numpy as np
-import pandas as pd
 import RobotGPT.tasks  # noqa: F401
 import torch
 import tqdm
 from moviepy import ImageSequenceClip
 from openpi_client import image_tools, websocket_client_policy
 
+import omni.ui as ui
+
 import isaaclab_tasks  # noqa: F401
 from isaaclab_tasks.utils import parse_env_cfg
 
 
+# UI window providing rollout controls
+class RolloutControlsUI:
+    def __init__(self):
+        self.rollouts_stopped = False
+        self.rollout_paused = False
+        self.rollout_completed = False
+
+        self._window = ui.Window(
+            "Rollout Controls",
+            width=300,
+            height=200
+        )
+        # self._window.
+
+        with self._window.frame:
+            with ui.VStack(spacing=5):
+                ui.Button("Pause / Resume", clicked_fn=self._toggle_pause)
+                ui.Button("Complete Rollout", clicked_fn=self._complete_rollout)
+                ui.Button("Stop Rollouts", clicked_fn=self._stop_rollouts)
+
+    def _toggle_pause(self):
+        self.rollout_paused = not self.rollout_paused
+        print("[INFO] Rollout paused." if self.rollout_paused else "[INFO] Rollout resumed.")
+
+    def _complete_rollout(self):
+        self.rollout_completed = True
+        print("[INFO] Rollout completed.")
+
+    def _stop_rollouts(self):
+        self.rollouts_stopped = True
+        print("[INFO] Rollouts stopped.")
+
+
+# Create UI window
+rollout_controls_ui = RolloutControlsUI()
+
+
+# import subprocess
+
+# venv_python = "/path/to/other/venv/bin/python"
+# script_path = "/path/to/target_script.py"
+
+# p = subprocess.Popen([
+#     venv_python,
+#     script_path,
+#     "arg1",
+#     "arg2"
+# ])
+
+# print("Started process:", p.pid)
+
+# # main script continues immediately
+
+# p.terminate()  # ask it to stop gracefully
+# p.wait()
+
+# p.kill()       # force kill
+# p.wait()
+
+
 def main():
     """"OpenPi client for Isaac Lab environment."""
-    if args_cli.num_rollouts <= 0:
-        raise ValueError("num_rollouts must be greater than 0.")
-
     # parse configuration
     env_cfg = parse_env_cfg(
         args_cli.task, device=args_cli.device, num_envs=1, use_fabric=not args_cli.disable_fabric
     )
+
+    video_dir = os.path.join("robotgpt_videos", args_cli.task, args_cli.policy_name, str(args_cli.policy_checkpoint))
+
     # create environment
     print("[INFO]: Creating environment.")
-    env = gym.make(args_cli.task, cfg=env_cfg)
+    env = gym.make(args_cli.task, cfg=env_cfg, render_mode="rgb_array" if args_cli.video else None)
+
+    # wrap environment for video recording
+    if args_cli.video:
+        video_kwargs = {
+            "video_folder": video_dir,
+            "name_prefix": "video",
+            "episode_trigger": lambda episode: True # record every episode
+        }
+        print("[INFO] Recording videos during training.")
+        env = gym.wrappers.RecordVideo(env, **video_kwargs)
 
     # Check if prompt has been specified
     if not hasattr(env_cfg, "prompt"):
@@ -84,123 +180,89 @@ def main():
     policy_client = websocket_client_policy.WebsocketClientPolicy(args_cli.remote_host, args_cli.remote_port)
     print("[INFO]: Connected to policy server.")
 
-    # Data frame for result info
-    if args_cli.save_stats:
-        stats = pd.DataFrame(columns=["success", "duration", "video_filename"])
-
     # simulate environment
     rollout_num = 0
     while simulation_app.is_running():
         # run everything in inference mode
         with torch.inference_mode():
-            # # compute zero actions
-            # actions = torch.zeros(env.action_space.shape, device=env.unwrapped.device)
-            # # apply actions
-            # env.step(actions)
-
-            # reset environment
+            # reset environment (also after last episode to save its video)
             env_obs, _ = env.reset()
+            print("[INFO]: Episode was reset.")
 
             # Rollout parameters
             actions_from_chunk_completed = 0
             pred_action_chunk = None
 
-            # Prepare to save video of rollout
-            timestamp = datetime.datetime.now().strftime("%Y_%m_%d_%H:%M:%S")
-            video = []
+            # Prepare to save videos of camera observations
+            wrist_cam_video, table_cam_video = [], []
 
             if args_cli.max_timesteps > 0:
                 bar = tqdm.tqdm(range(args_cli.max_timesteps))
             else:
                 bar = tqdm.tqdm(count(), total=None)
             rollout_num += 1
-            print(f"[INFO]: Starting rollout {rollout_num}/{args_cli.num_rollouts}... press Ctrl+C to stop early.")
+            print(f"[INFO]: Starting rollout {rollout_num}/{args_cli.num_rollouts}...")
             for t_step in bar:
+                while rollout_controls_ui.rollout_paused and simulation_app.is_running():
+                    simulation_app.update()
+
                 # Check if app has been closed
                 if not simulation_app.is_running():
                     break
 
-                try:
-                    obs = extract_numpy_observation(env_obs)
+                obs = extract_numpy_observation(env_obs)
 
-                    # Save video frame
-                    if args_cli.save_video:
-                        video.append(obs["table_img"])
+                # Save camera observations for video
+                if args_cli.video_obs:
+                    wrist_cam_video.append(obs["wrist_img"])
+                    table_cam_video.append(obs["table_img"])
 
-                    # Send websocket request to policy server if it's time to predict a new chunk
-                    if actions_from_chunk_completed == 0 or actions_from_chunk_completed >= args_cli.open_loop_horizon:
-                        actions_from_chunk_completed = 0
+                # Send websocket request to policy server if it's time to predict a new chunk
+                if actions_from_chunk_completed == 0 or actions_from_chunk_completed >= args_cli.open_loop_horizon:
+                    actions_from_chunk_completed = 0
 
-                        # Transform observation data to format expected by policy server
-                        policy_server_obs = franka_to_droid_obs(obs, env_cfg.prompt)
+                    # Transform observation data to format expected by policy server
+                    policy_server_obs = franka_to_droid_obs(obs, env_cfg.prompt)
 
-                        # Wrap the server call in a context manager to prevent Ctrl+C from interrupting it
-                        # Ctrl+C will be handled after the server call is complete
-                        with prevent_keyboard_interrupt():
-                            pred_action_chunk = policy_client.infer(policy_server_obs)["actions"]
+                    # Wrap the server call in a context manager to prevent Ctrl+C from interrupting it
+                    # Ctrl+C will be handled after the server call is complete
+                    with prevent_keyboard_interrupt():
+                        pred_action_chunk = policy_client.infer(policy_server_obs)["actions"]
 
-                    # Select current action to execute from chunk
-                    action = pred_action_chunk[actions_from_chunk_completed]
-                    actions_from_chunk_completed += 1
+                # Select current action to execute from chunk
+                action = pred_action_chunk[actions_from_chunk_completed]
+                actions_from_chunk_completed += 1
 
-                    # Transform action data to format expected by environment
-                    action = droid_to_franka_action(action)
-                    action = torch.tensor(action[np.newaxis], dtype=torch.float32, device=args_cli.device)
+                # Transform action data to format expected by environment
+                action = droid_to_franka_action(action)
+                action = torch.tensor(action[np.newaxis], dtype=torch.float32, device=args_cli.device)
 
-                    # Step environment
-                    env_obs, _, _, _, _ = env.step(action)
+                # Step environment
+                env_obs, _, terminated, truncated, _ = env.step(action)
 
-                    # # Sleep to match DROID data collection frequency
-                    # elapsed_time = time.time() - start_time
-                    # if elapsed_time < 1 / DROID_CONTROL_FREQUENCY:
-                    #     time.sleep(1 / DROID_CONTROL_FREQUENCY - elapsed_time)
-                except KeyboardInterrupt:
+                # Check if episode has ended
+                if terminated:
+                    print("[INFO]: Episode was terminated.")
+                    break
+                if truncated:
+                    print("[INFO]: Episode timed out.")
+                    break
+                if rollout_controls_ui.rollout_completed:
+                    rollout_controls_ui.rollout_completed = False
+                    break
+                if rollout_controls_ui.rollouts_stopped:
                     break
 
-            # Save video to disk
-            if args_cli.save_video and simulation_app.is_running():
-                video = np.stack(video)
-                save_filename = "video_" + timestamp
-                ImageSequenceClip(list(video), fps=10).write_videofile(save_filename + ".mp4", codec="libx264")
+            # Save camera observation videos to disk
+            if args_cli.video_obs:
+                env_fps = 1.0 / (env_cfg.sim.dt * env_cfg.decimation)
+                filename = os.path.join(video_dir, "wrist-cam-episode-" + str(rollout_num - 1)) + ".mp4"
+                ImageSequenceClip(wrist_cam_video, fps=env_fps).write_videofile(filename, codec="libx264", logger=None)
+                filename = os.path.join(video_dir, "table-cam-episode-" + str(rollout_num - 1)) + ".mp4"
+                ImageSequenceClip(table_cam_video, fps=env_fps).write_videofile(filename, codec="libx264", logger=None)
 
-            if args_cli.save_stats and simulation_app.is_running():
-                # Query user for rollout success rating
-                success: str | float | None = None
-                while not isinstance(success, float):
-                    success = input(
-                        "[INPUT]: Did the rollout succeed? (enter y for 100%, n for 0%), or a numeric value 0-100 based on the evaluation spec"
-                    )
-                    if success == "y":
-                        success = 1.0
-                    elif success == "n":
-                        success = 0.0
-                    else:
-                        success = float(success) / 100
-
-                    if not (0 <= success <= 1):
-                        print(f"[INPUT]: Success must be a number in [0, 100] but got: {success * 100}")
-                        success = None
-
-                # Save statistics
-                stats = stats.append(
-                    {
-                        "success": success,
-                        "duration": t_step,
-                        "video_filename": save_filename,
-                    },
-                    ignore_index=True,
-                )
-
-            if rollout_num >= args_cli.num_rollouts:
+            if rollout_num >= args_cli.num_rollouts or rollout_controls_ui.rollouts_stopped:
                 break
-
-    # Store result statistics
-    if args_cli.save_stats:
-        os.makedirs("openpi/results", exist_ok=True)
-        timestamp = datetime.datetime.now().strftime("%I:%M%p_%B_%d_%Y")
-        csv_filename = os.path.join("openpi/results", f"eval_{timestamp}.csv")
-        stats.to_csv(csv_filename)
-        print(f"[INFO]: Results saved to {csv_filename}")
 
     # close the simulator
     env.close()
