@@ -1,7 +1,19 @@
 """
-Interface and training configurations for single-arm Franka setups in RobotGPT.
+This script defines classes/configs for interfacing/training openpi models with the Isaac Lab environments of the
+RobotGPT repository, as well as with datasets created using these environments.
 
-Based on code from the openpi repository: https://github.com/Physical-Intelligence/openpi
+Three main components are defined:
+- *Input / *Output classes that define the data mapping from the Isaac Lab environment to the model and vice versa.
+- A *DataConfig class that defines how to process raw data from datasets for training.
+- Several TrainConfig class instances that define fine-tuning hyperparameters, data config, and weight loader.
+
+
+Parts of this script are based on contents of the "src/openpi/policies/libero_policy.py" and
+"src/openpi/training/config.py" scripts of the openpi repository.
+
+Modifications: Copyright (c) 2026 ronypepper.
+
+License: Apache 2.0
 """
 
 import dataclasses
@@ -43,7 +55,7 @@ def _parse_image(image) -> np.ndarray:
 
 
 @dataclasses.dataclass(frozen=True)
-class FrankaInputs(transforms.DataTransformFn):
+class FrankaSingleArmInputs(transforms.DataTransformFn):
     # Determines which model will be used.
     model_type: _model.ModelType
 
@@ -85,7 +97,7 @@ class FrankaInputs(transforms.DataTransformFn):
 
 
 @dataclasses.dataclass(frozen=True)
-class FrankaOutputs(transforms.DataTransformFn):
+class FrankaSingleArmOutputs(transforms.DataTransformFn):
     """
     This class is used to convert outputs from the model back the the dataset specific format. It is
     used for inference only.
@@ -97,7 +109,7 @@ class FrankaOutputs(transforms.DataTransformFn):
 
 
 @dataclasses.dataclass(frozen=True)
-class LeRobotFrankaDataConfig(DataConfigFactory):
+class FrankaSingleArmDataConfig(DataConfigFactory):
     """
     This config is used to configure transforms that are applied at various parts of the data pipeline.
     """
@@ -129,8 +141,8 @@ class LeRobotFrankaDataConfig(DataConfigFactory):
         # Below, we define the transforms for data going into the model (``inputs``) and the transforms
         # for data coming out of the model (``outputs``) (the latter is only used during inference).
         data_transforms = _transforms.Group(
-            inputs=[FrankaInputs(model_type=model_config.model_type)],
-            outputs=[FrankaOutputs()],
+            inputs=[FrankaSingleArmInputs(model_type=model_config.model_type)],
+            outputs=[FrankaSingleArmOutputs()],
         )
 
         # Pi0 models are trained on delta actions (relative to the first state in each action chunk), except for the gripper.
@@ -154,14 +166,16 @@ class LeRobotFrankaDataConfig(DataConfigFactory):
         )
 
 
-# These train configs define the hyperparameters for fine-tuning the base model on a specific dataset.
-franka_configs = [
+# These train configs define the hyperparameters for fine-tuning the base model on a dataset.
+franka_single_arm_configs = [
     TrainConfig(
-        name="pi05_robotgpt_franka",  # low_mem_finetune
+        name="robotgpt_franka_single_arm_pi05_lora",  # low_mem_finetune
+        assets_base_dir="./robotgpt_output/assets",
+        checkpoint_base_dir="./robotgpt_output/checkpoints",
         model=pi0_config.Pi0Config(
             pi05=True, paligemma_variant="gemma_2b_lora", action_expert_variant="gemma_300m_lora"
         ),
-        data=LeRobotFrankaDataConfig(
+        data=FrankaSingleArmDataConfig(
             repo_id="ronypepper/dataset",
             base_config=DataConfig(prompt_from_task=True),
             extra_delta_transform=True,
@@ -178,11 +192,11 @@ franka_configs = [
     ),
     # This config is just for viewing the pi05 base model's performance on a task as is - not for finetuning.
     TrainConfig(
-        name="pi05_robotgpt_franka_base",
+        name="robotgpt_franka_single_arm_pi05_base",
         model=pi0_config.Pi0Config(
             pi05=True,
         ),
-        data=LeRobotFrankaDataConfig(
+        data=FrankaSingleArmDataConfig(
             repo_id="ronypepper/dataset",
             assets=AssetsConfig(
                 assets_dir="gs://openpi-assets/checkpoints/pi05_base/assets",

@@ -35,8 +35,7 @@ parser.add_argument("--remote_host", type=str, default="0.0.0.0", help="IP addre
 parser.add_argument("--remote_port", type=int, default=8000, help="Port of the policy server.")
 
 # logging-specific arguments
-parser.add_argument("--policy_name", type=str, default=None, help="Name of the policy.")
-parser.add_argument("--policy_checkpoint", type=int, default=None, help="Checkpoint number of the policy (== training steps).")
+parser.add_argument("--video_dir", type=str, default=None, help="Videos will be saved to this path if video or video_obs is set.")
 
 # append AppLauncher cli args
 AppLauncher.add_app_launcher_args(parser)
@@ -49,8 +48,8 @@ args_cli.enable_cameras = True
 # arguments check
 if args_cli.task is None:
     raise ValueError("task must be set.")
-if args_cli.policy_name is None:
-    raise ValueError("policy_name must be set.")
+if (args_cli.video or args_cli.video_obs) and args_cli.video_dir is None:
+    raise ValueError("video_dir must be specified when video or video_obs is set.")
 if args_cli.policy_checkpoint is None:
     raise ValueError("policy_name must be set.")
 if args_cli.num_rollouts <= 0:
@@ -150,20 +149,18 @@ def main():
         args_cli.task, device=args_cli.device, num_envs=1, use_fabric=not args_cli.disable_fabric
     )
 
-    video_dir = os.path.join("robotgpt_videos", args_cli.task, args_cli.policy_name, str(args_cli.policy_checkpoint))
-
     # create environment
     print("[INFO]: Creating environment.")
     env = gym.make(args_cli.task, cfg=env_cfg, render_mode="rgb_array" if args_cli.video else None)
 
-    # wrap environment for video recording
+    # wrap environment for video recording of scene
     if args_cli.video:
         video_kwargs = {
-            "video_folder": video_dir,
-            "name_prefix": "video",
+            "video_folder": args_cli.video_dir,
+            "name_prefix": "scene",
             "episode_trigger": lambda episode: True # record every episode
         }
-        print("[INFO] Recording videos during training.")
+        print("[INFO] Recording scene videos during training.")
         env = gym.wrappers.RecordVideo(env, **video_kwargs)
 
     # Check if prompt has been specified
@@ -256,9 +253,9 @@ def main():
             # Save camera observation videos to disk
             if args_cli.video_obs:
                 env_fps = 1.0 / (env_cfg.sim.dt * env_cfg.decimation)
-                filename = os.path.join(video_dir, "wrist-cam-episode-" + str(rollout_num - 1)) + ".mp4"
+                filename = os.path.join(args_cli.video_dir, "wrist-cam-episode-" + str(rollout_num - 1)) + ".mp4"
                 ImageSequenceClip(wrist_cam_video, fps=env_fps).write_videofile(filename, codec="libx264", logger=None)
-                filename = os.path.join(video_dir, "table-cam-episode-" + str(rollout_num - 1)) + ".mp4"
+                filename = os.path.join(args_cli.video_dir, "table-cam-episode-" + str(rollout_num - 1)) + ".mp4"
                 ImageSequenceClip(table_cam_video, fps=env_fps).write_videofile(filename, codec="libx264", logger=None)
 
             if rollout_num >= args_cli.num_rollouts or rollout_controls_ui.rollouts_stopped:
