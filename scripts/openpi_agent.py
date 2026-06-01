@@ -29,7 +29,7 @@ parser.add_argument("--video_obs", action="store_true", default=False, help="Rec
 
 # openpi-specific arguments
 parser.add_argument("--num_rollouts", type=int, default=10, help="Number of rollouts to perform.")
-parser.add_argument("--max_timesteps", type=int, default=0, help="Maximum number of timesteps to take. 0 means infinite.")
+parser.add_argument("--max_duration", type=float, default=0.0, help="Overrides default maximum episode length in seconds.")
 parser.add_argument("--open_loop_horizon", type=int, default=16, help="Number of actions to execute from a prediction before re-querying the policy.")
 parser.add_argument("--remote_host", type=str, default="0.0.0.0", help="IP address of the policy server.")
 parser.add_argument("--remote_port", type=int, default=8000, help="Port of the policy server.")
@@ -50,12 +50,8 @@ if args_cli.task is None:
     raise ValueError("task must be set.")
 if (args_cli.video or args_cli.video_obs) and args_cli.video_dir is None:
     raise ValueError("video_dir must be specified when video or video_obs is set.")
-if args_cli.policy_checkpoint is None:
-    raise ValueError("policy_name must be set.")
 if args_cli.num_rollouts <= 0:
     raise ValueError("num_rollouts must be greater than 0.")
-
-
 
 # launch omniverse app
 app_launcher = AppLauncher(args_cli)
@@ -66,7 +62,6 @@ simulation_app = app_launcher.app
 import contextlib
 import os
 import signal
-from itertools import count
 
 import gymnasium as gym
 import numpy as np
@@ -148,6 +143,8 @@ def main():
     env_cfg = parse_env_cfg(
         args_cli.task, device=args_cli.device, num_envs=1, use_fabric=not args_cli.disable_fabric
     )
+    if args_cli.max_duration > 0.0:
+        env_cfg.episode_length_s = args_cli.max_duration
 
     # create environment
     print("[INFO]: Creating environment.")
@@ -193,10 +190,7 @@ def main():
             # Prepare to save videos of camera observations
             wrist_cam_video, table_cam_video = [], []
 
-            if args_cli.max_timesteps > 0:
-                bar = tqdm.tqdm(range(args_cli.max_timesteps))
-            else:
-                bar = tqdm.tqdm(count(), total=None)
+            bar = tqdm.tqdm(range(int(env_cfg.episode_length_s / (env_cfg.sim.dt * float(env_cfg.decimation)))))
             rollout_num += 1
             print(f"[INFO]: Starting rollout {rollout_num}/{args_cli.num_rollouts}...")
             for t_step in bar:
@@ -244,6 +238,9 @@ def main():
                 if truncated:
                     print("[INFO]: Episode timed out.")
                     break
+                # if max_sim_steps > 0 and env._sim_step_counter >= max_sim_steps:
+                #     print("[INFO]: Episode reached max duration.")
+                #     break
                 if rollout_controls_ui.rollout_completed:
                     rollout_controls_ui.rollout_completed = False
                     break

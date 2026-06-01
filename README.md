@@ -2,7 +2,7 @@
 
 # Installation
 
-The installation and later usage instructions assume you perform the install steps below within a common root folder, i.e. you should end up with a folder structure like this (root folder is called RobotLearning here):
+The installation and later usage instructions assume you perform the install steps below within a common root folder, i.e. you should end up with a folder structure like this (root folder would be "RobotLearning" here):
 ```
 RobotLearning
 ├── RobotGPT
@@ -10,11 +10,13 @@ RobotLearning
 ├── openpi
 ├── env_isaaclab
 ├── env_isaacteleop
+├── env_robotgpt_evals
 ```
 ### Installation Steps
 1. Install Isaac Lab v2.3.2 locally (using Isaac Sim pip package and Isaac Lab from GitHub): [Isaac Lab Documentation](https://isaac-sim.github.io/IsaacLab/main/source/setup/installation/pip_installation.html).
 
 2. Install openpi locally from GitHub: [openpi GitHub](https://github.com/Physical-Intelligence/openpi).
+    - If you want to log runs online with Weights&Biases, you may need to upgrade the wandb package to support longer API keys: `source openpi/.venv/bin/activate && uv pip install -U wandb`
 
 3. Install RobotGPT from GitHub:
 ```
@@ -23,7 +25,7 @@ cd RobotGPT && python -m pip install -e source/RobotGPT
 ```
 
 4. Modify openpi install:
-    - `cp -r RobotGPT/openpi/robotgpt openpi/src`
+    - Run `cp -r RobotGPT/openpi/robotgpt openpi/src`
     - Edit openpi/src/openpi/training/config.py:
         - Add "from robotgpt.configurations import get_robotgpt_configs" to bottom of imports
         - Add "*get_robotgpt_configs()," as last entry to the _CONFIGS list, right after "*polaris_config.get_polaris_configs(),"
@@ -34,6 +36,7 @@ source env_isaaclab/bin/activate
 cd openpi/packages/openpi-client
 uv pip install -e .
 ```
+
 6. Install Isaac Teleop in its own environment:
 ```
 uv venv --python 3.12 --seed env_isaacteleop
@@ -42,11 +45,18 @@ uv pip install 'isaacteleop[cloudxr,retargeters]~=1.0.0' --extra-index-url https
 ```
 If you encounter connection issues with XR teleoperation later, you may need to configure your firewall. Refer to Isaac Teleop's Quick Start guide: [Isaac Teleop Quick Start](https://nvidia.github.io/IsaacTeleop/main/getting_started/quick_start.html).
 
+7. Setup evaluation environment (only required for annotation and graph generation):
+```
+uv venv --python 3.12 --seed env_robotgpt_evals
+source env_robotgpt_evals/bin/activate
+uv pip install -r RobotGPT/evals/requirements.txt
+```
+If you encounter missing libxcb-cursor0 error when running scripts in this environment, run: `sudo apt install libxcb-cursor0`
+
+
 # Directory Structure
 
 The diagram below gives an overview of the output directory structure.
-> Note that every dataset in RobotGPT has a matching experiment, therefore DATASET_NAME == EXPERIMENT_NAME.\
-> This is done by choice to reduce confusion and not strictly required by the codebase.
 ```
 RobotLearning
 ├── RobotGPT                            ... This repository
@@ -83,22 +93,47 @@ RobotLearning
         :   :   └── CHECKPOINT          ... Checkpoint number
         :   :   :   :
 ```
+> Note that every dataset in RobotGPT has a matching experiment, therefore DATASET_NAME == EXPERIMENT_NAME.\
+> This is done by choice to reduce confusion and not strictly required by the codebase.
+
 
 # Usage
 
-All usage examples need to be executed from the common root folder, i.e. "Robot Learning" in the **Directory Structure** section above.
+The standard pipeline has four steps:
+1. Collecting task demonstrations using an XR headset and tracked motion controllers
+2. Converting the obtained HDF5 dataset to a LeRobot dataset
+3. Training an openpi model on the LeRobot dataset
+4. Running the trained policy and evaluating its performance on the task
 
-## Zero-action task simulation
+For every step, there is a shell script available in the "utils/" directory that executes all necessary commands while adhering to the directory structure layed out above for any created file:
+1. record_xr_demos.sh
+2. convert_hdf5_to_lerobot.sh
+3. train_openpi_model.sh
+4. evaluate_openpi_model.sh
+
+For details about the required arguments, execute `XXXXXXX.sh --help`.
+
+> Remember to make the scripts executable by running:\
+> `chmod +x record_xr_demos.sh convert_hdf5_to_lerobot.sh train_openpi_model.sh evaluate_openpi_model.sh`\
+> inside "RobotGPT/utils/".
+
+
+# Utility commands
+
+These are some useful commands during development. All command blocks need to be executed from the common root folder, i.e. "Robot Learning" in the **Directory Structure** section above.
+
+### Zero-action task simulation
 ```
 source env_isaaclab/bin/activate
 python RobotGPT/scripts/zero_agent.py --task RobotGPT-Place-Cube-In-Bin-Franka-Single-Arm-Pos-v0 \
 --num_envs 1 --enable_cameras --device cpu
 ```
-## XR Teleoperation with tracked motion controllers
-**Terminal 1: Start CloudXR** *(Note: You'll need to accept the CloudXR EULA on first run)*
+
+### XR Teleoperation with tracked motion controllers
+**Terminal 1: Start CloudXR**
 ```
 source env_isaacteleop/bin/activate
-python -m isaacteleop.cloudxr --cloudxr-env-config=dev/quest3_cloudxr.env # Last argument enables optical hand tracking
+python -m isaacteleop.cloudxr --accept-eula --cloudxr-env-config=RobotGPT/dev/quest3_cloudxr.env # Last argument enables optical hand tracking
 ```
 **Terminal 2: Start task simulation with teleop**
 ```
@@ -108,11 +143,73 @@ python RobotGPT/scripts/teleop_se3_agent.py --task RobotGPT-Place-Cube-In-Bin-Fr
 --enable_cameras --device cpu --teleop_device motioncontroller --xr
 ```
 
+### Replay recorded demonstrations in simulation
+```
+source env_isaaclab/bin/activate
+python RobotGPT/scripts/replay_demos.py --task RobotGPT-Place-Cube-In-Bin-Franka-Single-Arm-IK-Abs-v0 \
+--enable_cameras --device cpu --dataset_file robotgpt_output/datasets/hdf5/dataset.hdf5
+```
+
+### Merge multiple hdf5 datasets
+```
+source env_isaaclab/bin/activate
+python IsaacLab/scripts/tools/merge_hdf5_datasets.py \
+--input_files robotgpt_output/datasets/hdf5/dataset_1.hdf5 robotgpt_output/datasets/hdf5/dataset_2.hdf5 \
+--output_file robotgpt_output/datasets/hdf5/dataset.hdf5
+```
+
+### Create mp4 videos from a hdf5 dataset 
+```
+source env_isaaclab/bin/activate
+mkdir -p robotgpt_output/datasets/videos
+python IsaacLab/scripts/tools/hdf5_to_mp4.py --input_file robotgpt_output/datasets/hdf5/dataset.hdf5 \
+--output_dir robotgpt_output/datasets/videos --input_keys table_img wrist_img \
+--video_height 224 --video_width 224 --framerate 20
+```
+
+### Openpi Pi05 base model evaluation (not finetuned) 
+**Terminal 1: Start openpi policy server**
+```
+source openpi/.venv/bin/activate
+XLA_PYTHON_CLIENT_MEM_FRACTION=0.5 python openpi/scripts/serve_policy.py policy:checkpoint \
+--policy.config=robotgpt_franka_single_arm_pi05_base \
+--policy.dir=gs://openpi-assets/checkpoints/pi05_base
+```
+**Terminal 2:  Start task simulation with openpi client**
+```
+source env_isaaclab/bin/activate
+python RobotGPT/scripts/openpi_agent.py --task RobotGPT-Place-Cube-In-Bin-Franka-Single-Arm-Pos-v0 \
+--device cpu --video --video_obs \
+--video_dir=robotgpt_output/evaluation/robotgpt_franka_single_arm_pi05_base
+```
+<!-- 
+XLA_PYTHON_CLIENT_MEM_FRACTION=0.5 python openpi/scripts/serve_policy.py policy:checkpoint --policy.config=pi05_droid --policy.dir=gs://openpi-assets/checkpoints/pi05_base
+XLA_PYTHON_CLIENT_MEM_FRACTION=0.5 python openpi/scripts/serve_policy.py policy:checkpoint --policy.config=pi05_droid_jointpos_polaris --policy.dir=gs://openpi-assets/checkpoints/pi05_droid_jointpos -->
+
+# License
+
+The RobotGPT repository, except for the "openpi/" directory, is an Isaac Lab project generated by the Isaac Lab template generator.
+Additionally, some files in the "script/" and "source/" directories are based on files from the [Isaac Lab GitHub repository](https://github.com/isaac-sim/IsaacLab).
+The RobotGPT repository is therefore licensed under the [BSD-3 License](LICENSE), like the Isaac Lab GitHub repository, except for the "openpi/" directory, which contains code to be used and partly based on scripts of the [openpi GitHub repository](https://github.com/Physical-Intelligence/openpi). The "openpi/" directory 
+is therefore licensed under [Apache 2.0](LICENSE-openpi), like the openpi GitHub repository.
+
+
+
+
+
+
+
+
+
+
+
+
+
 ## XR demonstration collection with tracked motion controllers
 **Terminal 1: Start CloudXR**
 ```
 source env_isaacteleop/bin/activate
-python -m isaacteleop.cloudxr --cloudxr-env-config=dev/quest3_cloudxr.env # Last argument enables optical hand tracking
+python -m isaacteleop.cloudxr --accept-eula --cloudxr-env-config=RobotGPT/dev/quest3_cloudxr.env # Last argument enables optical hand tracking
 ```
 **Terminal 2: Start task simulation with teleop and recording**
 ```
@@ -123,38 +220,13 @@ python RobotGPT/scripts/record_demos.py --task RobotGPT-Place-Cube-In-Bin-Franka
 --enable_cameras --device cpu --teleop_device motioncontroller --xr \
 --dataset_file robotgpt_output/datasets/hdf5/dataset.hdf5 --num_demos 25
 ```
-**(Optional) Terminal 3: Replay recorded demonstration in simulation**
-```
-source env_isaaclab/bin/activate
-python RobotGPT/scripts/replay_demos.py --task RobotGPT-Place-Cube-In-Bin-Franka-Single-Arm-IK-Abs-v0 \
---enable_cameras --device cpu --dataset_file robotgpt_output/datasets/hdf5/dataset.hdf5
-```
-
-## Merge multiple hdf5 datasets
-```
-source env_isaaclab/bin/activate
-python IsaacLab/scripts/tools/merge_hdf5_datasets.py \
---input_files robotgpt_output/datasets/hdf5/dataset_1.hdf5 robotgpt_output/datasets/hdf5/dataset_2.hdf5 \
---output_file robotgpt_output/datasets/hdf5/dataset.hdf5
-```
-
-## Create mp4 videos from a hdf5 dataset 
-```
-source env_isaaclab/bin/activate
-mkdir -p robotgpt_output/datasets/videos
-python IsaacLab/scripts/tools/hdf5_to_mp4.py --input_file robotgpt_output/datasets/hdf5/dataset.hdf5 \
---output_dir robotgpt_output/datasets/videos --input_keys table_img wrist_img \
---video_height 224 --video_width 224 --framerate 20
-```
 
 ## HDF5 to LeRobot dataset conversion
 ```
 source openpi/.venv/bin/activate
 export HF_LEROBOT_HOME="$(pwd)/robotgpt_output/datasets/lerobot"
 python -m robotgpt.convert_hdf5_to_openpi_lerobot --dataset robotgpt_output/datasets/hdf5/dataset.hdf5 \
---hf_user YOUR_USERNAME --robot_type franka_single_arm \
-#--output-name dataset \ #
-#--num_episodes 0
+--hf_user YOUR_USERNAME --robot_type franka_single_arm
 ```
 
 ## Openpi training (to resume a training run uncomment the --resume argument in last command)
@@ -186,21 +258,14 @@ python RobotGPT/scripts/openpi_agent.py --task RobotGPT-Place-Cube-In-Bin-Franka
 --video_dir=robotgpt_output/evaluation/robotgpt_franka_single_arm_pi05_lora/EXPERIMENT_NAME/4999
 ```
 
-## Openpi Pi05 base model evaluation (not finetuned) 
-```
-source openpi/.venv/bin/activate
-XLA_PYTHON_CLIENT_MEM_FRACTION=0.5 python openpi/scripts/serve_policy.py policy:checkpoint \
---policy.config=robotgpt_franka_single_arm_pi05_base \
---policy.dir=gs://openpi-assets/checkpoints/pi05_base
-```
 
-<!-- 
-XLA_PYTHON_CLIENT_MEM_FRACTION=0.5 python openpi/scripts/serve_policy.py policy:checkpoint --policy.config=pi05_droid --policy.dir=gs://openpi-assets/checkpoints/pi05_base
-XLA_PYTHON_CLIENT_MEM_FRACTION=0.5 python openpi/scripts/serve_policy.py policy:checkpoint --policy.config=pi05_droid_jointpos_polaris --policy.dir=gs://openpi-assets/checkpoints/pi05_droid_jointpos -->
 
-# License
 
-The RobotGPT repository, except for the "openpi/" directory, is an Isaac Lab project generated by the Isaac Lab template generator.
-Additionally, some files in the "script/" and "source/" directories are based on files from the [Isaac Lab GitHub repository](https://github.com/isaac-sim/IsaacLab).
-The RobotGPT repository is therefore licensed under the [BSD-3 License](LICENSE), like the Isaac Lab GitHub repository, except for the "openpi/" directory, which contains code to be used and partly based on scripts of the [openpi GitHub repository](https://github.com/Physical-Intelligence/openpi). The "openpi/" directory 
-is therefore licensed under [Apache 2.0](LICENSE-openpi), like the openpi GitHub repository.
+
+
+
+
+
+
+
+

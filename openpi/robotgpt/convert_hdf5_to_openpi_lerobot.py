@@ -40,7 +40,7 @@ class Args:
     # Hugging face username.
     hf_user: str | None = None
 
-    # Name of the ouput dataset. If None, the input dataset's name will be used.
+    # Name of the ouput dataset. If None or empty string, the input dataset's name will be used.
     output_name: str | None = None
 
     # Push converted dataset to hugging face hub.
@@ -67,7 +67,7 @@ def main(args: Args):
     if not h5py.is_hdf5(args.dataset):
         raise ValueError(f"dataset ({args.dataset}) is not a valid .hdf5 dataset.")
 
-    if args.output_name is None:
+    if args.output_name is None or args.output_name == "":
         args.output_name = pathlib.Path(args.dataset).stem
 
     if args.robot_type not in ROBOT_TYPES:
@@ -130,12 +130,17 @@ def main(args: Args):
             image_writer_processes=5,
         )
 
-        # Pare and write requested number of demonstrations to the LeRobot dataset
+        # Parse and write requested number of demonstrations to the LeRobot dataset
         hdf5_demos = hdf5_dataset["data"].values()
+
         if args.num_episodes > 0:
+            total_episodes = args.num_episodes
             hdf5_demos = islice(hdf5_demos, args.num_episodes)
-        for demo in tqdm(hdf5_demos):
-            for step in tqdm(range(demo.attrs["num_samples"])):
+        else:
+            total_episodes = len(hdf5_dataset["data"])
+
+        for demo in tqdm(hdf5_demos, total=total_episodes):
+            for step in tqdm(range(demo.attrs["num_samples"]), leave=False):
                 frame = extract_frame_fct(demo, step)
                 frame["task"] = prompt
                 lerobot_dataset.add_frame(frame)

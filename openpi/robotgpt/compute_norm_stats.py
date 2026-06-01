@@ -15,7 +15,6 @@ License: Apache 2.0
 
 import numpy as np
 import tqdm
-import tyro
 
 import openpi.models.model as _model
 import openpi.shared.normalize as normalize
