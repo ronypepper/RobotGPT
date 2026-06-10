@@ -13,14 +13,16 @@ RobotLearning
 ├── env_robotgpt_evals
 ```
 ### Installation Steps
-1. Install Isaac Lab v2.3.2 locally (using Isaac Sim pip package and Isaac Lab from GitHub): [Isaac Lab Documentation](https://isaac-sim.github.io/IsaacLab/main/source/setup/installation/pip_installation.html).
+1. Install Isaac Lab 3 (develop branch) locally (using Isaac Sim pip package and Isaac Lab from GitHub): [Isaac Lab Documentation](https://isaac-sim.github.io/IsaacLab/develop/source/setup/installation/pip_installation.html).
+> If you encounter connection issues with XR teleoperation later, you may need to configure your firewall. Refer to Isaac Teleop's Quick Start guide: [Isaac Teleop Quick Start](https://nvidia.github.io/IsaacTeleop/main/getting_started/quick_start.html).
 
 2. Install openpi locally from GitHub: [openpi GitHub](https://github.com/Physical-Intelligence/openpi).
     - If you want to log runs online with Weights&Biases, you may need to upgrade the wandb package to support longer API keys: `source openpi/.venv/bin/activate && uv pip install -U wandb`
 
-3. Install RobotGPT from GitHub:
+3. Install RobotGPT from GitHub in Isaac Lab's environment:
 ```
 git clone https://github.com/ronypepper/RobotGPT.git
+source env_isaaclab/bin/activate
 cd RobotGPT && python -m pip install -e source/RobotGPT
 ```
 
@@ -37,21 +39,13 @@ cd openpi/packages/openpi-client
 uv pip install -e .
 ```
 
-6. Install Isaac Teleop in its own environment:
-```
-uv venv --python 3.12 --seed env_isaacteleop
-source env_isaacteleop/bin/activate
-uv pip install 'isaacteleop[cloudxr,retargeters]~=1.0.0' --extra-index-url https://pypi.nvidia.com
-```
-If you encounter connection issues with XR teleoperation later, you may need to configure your firewall. Refer to Isaac Teleop's Quick Start guide: [Isaac Teleop Quick Start](https://nvidia.github.io/IsaacTeleop/main/getting_started/quick_start.html).
-
-7. Setup evaluation environment (only required for annotation and graph generation):
+6. Setup evaluation environment (only required for annotation and graph generation):
 ```
 uv venv --python 3.12 --seed env_robotgpt_evals
 source env_robotgpt_evals/bin/activate
 uv pip install -r RobotGPT/evals/requirements.txt
 ```
-If you encounter missing libxcb-cursor0 error when running scripts in this environment, run: `sudo apt install libxcb-cursor0`
+> If you encounter missing libxcb-cursor0 error when running scripts in this environment, run: `sudo apt install libxcb-cursor0`
 
 
 # Directory Structure
@@ -126,13 +120,13 @@ These are some useful commands during development. All command blocks need to be
 ```
 source env_isaaclab/bin/activate
 python RobotGPT/scripts/zero_agent.py --task RobotGPT-Place-Cube-In-Bin-Franka-Single-Arm-Pos-v0 \
---num_envs 1 --enable_cameras --device cpu
+--num_envs 1 --enable_cameras --viz kit --device cpu
 ```
 
 ### XR Teleoperation with tracked motion controllers
 **Terminal 1: Start CloudXR**
 ```
-source env_isaacteleop/bin/activate
+source env_isaaclab/bin/activate
 python -m isaacteleop.cloudxr --accept-eula --cloudxr-env-config=RobotGPT/dev/quest3_cloudxr.env # Last argument enables optical hand tracking
 ```
 **Terminal 2: Start task simulation with teleop**
@@ -147,7 +141,7 @@ python RobotGPT/scripts/teleop_se3_agent.py --task RobotGPT-Place-Cube-In-Bin-Fr
 ```
 source env_isaaclab/bin/activate
 python RobotGPT/scripts/replay_demos.py --task RobotGPT-Place-Cube-In-Bin-Franka-Single-Arm-IK-Abs-v0 \
---enable_cameras --device cpu --dataset_file robotgpt_output/datasets/hdf5/dataset.hdf5
+--enable_cameras --viz kit --device cpu --dataset_file robotgpt_output/datasets/hdf5/dataset.hdf5
 ```
 
 ### Merge multiple hdf5 datasets
@@ -179,7 +173,7 @@ XLA_PYTHON_CLIENT_MEM_FRACTION=0.5 python openpi/scripts/serve_policy.py policy:
 ```
 source env_isaaclab/bin/activate
 python RobotGPT/scripts/openpi_agent.py --task RobotGPT-Place-Cube-In-Bin-Franka-Single-Arm-Pos-v0 \
---device cpu --video --video_obs \
+--viz kit --device cpu --record_scene --record_table --record_wrists \
 --video_dir=robotgpt_output/evaluation/robotgpt_franka_single_arm_pi05_base
 ```
 <!-- 
@@ -208,7 +202,7 @@ is therefore licensed under [Apache 2.0](LICENSE-openpi), like the openpi GitHub
 ## XR demonstration collection with tracked motion controllers
 **Terminal 1: Start CloudXR**
 ```
-source env_isaacteleop/bin/activate
+source env_isaaclab/bin/activate
 python -m isaacteleop.cloudxr --accept-eula --cloudxr-env-config=RobotGPT/dev/quest3_cloudxr.env # Last argument enables optical hand tracking
 ```
 **Terminal 2: Start task simulation with teleop and recording**
@@ -254,7 +248,7 @@ XLA_PYTHON_CLIENT_MEM_FRACTION=0.5 python openpi/scripts/serve_policy.py policy:
 ```
 source env_isaaclab/bin/activate
 python RobotGPT/scripts/openpi_agent.py --task RobotGPT-Place-Cube-In-Bin-Franka-Single-Arm-Pos-v0 \
---device cpu --video --video_obs \
+--device cpu --record_scene --record_table --record_wrists \
 --video_dir=robotgpt_output/evaluation/robotgpt_franka_single_arm_pi05_lora/EXPERIMENT_NAME/4999
 ```
 

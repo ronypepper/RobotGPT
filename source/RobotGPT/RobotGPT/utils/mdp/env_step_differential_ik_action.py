@@ -74,15 +74,8 @@ class EnvStepDifferentialInverseKinematicsAction(ActionTerm):
         # save only the first body index
         self._body_idx = body_ids[0]
         self._body_name = body_names[0]
-        # check if articulation is fixed-base
-        # if fixed-base then the jacobian for the base is not computed
-        # this means that number of bodies is one less than the articulation's number of bodies
-        if self._asset.is_fixed_base:
-            self._jacobi_body_idx = self._body_idx - 1
-            self._jacobi_joint_ids = self._joint_ids
-        else:
-            self._jacobi_body_idx = self._body_idx
-            self._jacobi_joint_ids = [i + 6 for i in self._joint_ids]
+        self._jacobi_body_idx = self._body_idx - 1 if self._asset.is_fixed_base else self._body_idx
+        self._jacobi_joint_ids = [j + self._asset.num_base_dofs for j in self._joint_ids]
 
         # log info for debugging
         logger.info(
@@ -105,6 +98,9 @@ class EnvStepDifferentialInverseKinematicsAction(ActionTerm):
         self._raw_actions = torch.zeros(self.num_envs, self.action_dim, device=self.device)
         self._scaled_clipped_actions = torch.zeros_like(self._raw_actions)
         self._processed_actions = torch.zeros(self.num_envs, self._num_joints, device=self.device)
+
+        # owned buffer; _compute_frame_jacobian mutates this, not the data-layer view.
+        self._jacobian_b = torch.zeros(self.num_envs, 6, len(self._jacobi_joint_ids), device=self.device)
 
         # save the scale as tensors
         self._scale = torch.zeros((self.num_envs, self.action_dim), device=self.device)
@@ -146,12 +142,12 @@ class EnvStepDifferentialInverseKinematicsAction(ActionTerm):
 
     @property
     def jacobian_w(self) -> torch.Tensor:
-        return self._asset.root_physx_view.get_jacobians()[:, self._jacobi_body_idx, :, self._jacobi_joint_ids]
+        return self._asset.data.body_link_jacobian_w.torch[:, self._jacobi_body_idx, :, self._jacobi_joint_ids]
 
     @property
     def jacobian_b(self) -> torch.Tensor:
         jacobian = self.jacobian_w
-        base_rot = self._asset.data.root_quat_w
+        base_rot = self._asset.data.root_quat_w.torch
         base_rot_matrix = math_utils.matrix_from_quat(math_utils.quat_inv(base_rot))
         jacobian[:, :3, :] = torch.bmm(base_rot_matrix, jacobian[:, :3, :])
         jacobian[:, 3:, :] = torch.bmm(base_rot_matrix, jacobian[:, 3:, :])
@@ -206,9 +202,7 @@ class EnvStepDifferentialInverseKinematicsAction(ActionTerm):
         self._ik_controller.set_command(self._scaled_clipped_actions, ee_pos_curr, ee_quat_curr)
 
         # ------  Moved here from apply_actions() ------
-        # obtain quantities from simulation
-        # ee_pos_curr, ee_quat_curr = self._compute_frame_pose()
-        joint_pos = self._asset.data.joint_pos[:, self._joint_ids]
+        joint_pos = self._asset.data.joint_pos.torch[:, self._joint_ids]
         # compute the delta in joint-space
         if ee_quat_curr.norm() != 0:
             jacobian = self._compute_frame_jacobian()
@@ -218,7 +212,7 @@ class EnvStepDifferentialInverseKinematicsAction(ActionTerm):
 
     def apply_actions(self):
         # set the joint position command
-        self._asset.set_joint_position_target(self._processed_actions, self._joint_ids)
+        self._asset.set_joint_position_target_index(target=self._processed_actions, joint_ids=self._joint_ids)
 
     def reset(self, env_ids: Sequence[int] | None = None) -> None:
         self._raw_actions[env_ids] = 0.0
@@ -234,10 +228,10 @@ class EnvStepDifferentialInverseKinematicsAction(ActionTerm):
             A tuple of the body's position and orientation in the root frame.
         """
         # obtain quantities from simulation
-        ee_pos_w = self._asset.data.body_pos_w[:, self._body_idx]
-        ee_quat_w = self._asset.data.body_quat_w[:, self._body_idx]
-        root_pos_w = self._asset.data.root_pos_w
-        root_quat_w = self._asset.data.root_quat_w
+        ee_pos_w = self._asset.data.body_pos_w.torch[:, self._body_idx]
+        ee_quat_w = self._asset.data.body_quat_w.torch[:, self._body_idx]
+        root_pos_w = self._asset.data.root_pos_w.torch
+        root_quat_w = self._asset.data.root_quat_w.torch
         # compute the pose of the body in the root frame
         ee_pose_b, ee_quat_b = math_utils.subtract_frame_transforms(root_pos_w, root_quat_w, ee_pos_w, ee_quat_w)
         # account for the offset
@@ -254,8 +248,7 @@ class EnvStepDifferentialInverseKinematicsAction(ActionTerm):
         This function accounts for the target frame offset and applies the necessary transformations to obtain
         the right Jacobian from the parent body Jacobian.
         """
-        # read the parent jacobian
-        jacobian = self.jacobian_b
+        self._jacobian_b[:] = self.jacobian_b
         # account for the offset
         if self.cfg.body_offset is not None:
             # Modify the jacobian to account for the offset
@@ -263,12 +256,16 @@ class EnvStepDifferentialInverseKinematicsAction(ActionTerm):
             # v_link = v_ee + w_ee x r_link_ee = v_J_ee * q + w_J_ee * q x r_link_ee
             #        = (v_J_ee + w_J_ee x r_link_ee ) * q
             #        = (v_J_ee - r_link_ee_[x] @ w_J_ee) * q
-            jacobian[:, 0:3, :] += torch.bmm(-math_utils.skew_symmetric_matrix(self._offset_pos), jacobian[:, 3:, :])
+            self._jacobian_b[:, 0:3, :] += torch.bmm(
+                -math_utils.skew_symmetric_matrix(self._offset_pos), self._jacobian_b[:, 3:, :]
+            )
             # -- rotational part
             # w_link = R_link_ee @ w_ee
-            jacobian[:, 3:, :] = torch.bmm(math_utils.matrix_from_quat(self._offset_rot), jacobian[:, 3:, :])
+            self._jacobian_b[:, 3:, :] = torch.bmm(
+                math_utils.matrix_from_quat(self._offset_rot), self._jacobian_b[:, 3:, :]
+            )
 
-        return jacobian
+        return self._jacobian_b
 
 
 @configclass
@@ -290,8 +287,8 @@ class EnvStepDifferentialInverseKinematicsActionCfg(ActionTermCfg):
 
         pos: tuple[float, float, float] = (0.0, 0.0, 0.0)
         """Translation w.r.t. the parent frame. Defaults to (0.0, 0.0, 0.0)."""
-        rot: tuple[float, float, float, float] = (1.0, 0.0, 0.0, 0.0)
-        """Quaternion rotation ``(w, x, y, z)`` w.r.t. the parent frame. Defaults to (1.0, 0.0, 0.0, 0.0)."""
+        rot: tuple[float, float, float, float] = (0.0, 0.0, 0.0, 1.0)
+        """Quaternion rotation ``(x, y, z, w)`` w.r.t. the parent frame. Defaults to (0.0, 0.0, 0.0, 1.0)."""
 
     class_type: type[ActionTerm] = EnvStepDifferentialInverseKinematicsAction
 

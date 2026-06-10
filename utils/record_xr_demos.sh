@@ -130,7 +130,7 @@ fi
 # Start CloudXR server
 (
     echo "Starting CloudXR server..."
-    source env_isaacteleop/bin/activate
+    source env_isaaclab/bin/activate
     python -m isaacteleop.cloudxr --accept-eula --cloudxr-env-config=RobotGPT/dev/quest3_cloudxr.env &> "$OUT_STREAM" # Last argument enables optical hand tracking
 ) &
 BG_PIDS+=("$!")

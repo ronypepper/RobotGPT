@@ -24,8 +24,9 @@ parser.add_argument(
     "--disable_fabric", action="store_true", default=False, help="Disable fabric and use USD I/O operations."
 )
 parser.add_argument("--task", type=str, default=None, help="Name of the task.")
-parser.add_argument("--video", action="store_true", default=False, help="Record videos of the rollouts.")
-parser.add_argument("--video_obs", action="store_true", default=False, help="Record videos of the table and wrist camera observations.")
+parser.add_argument("--record_scene", action="store_true", default=False, help="Record videos of the scene.")
+parser.add_argument("--record_table", action="store_true", default=False, help="Record videos of the table camera observations.")
+parser.add_argument("--record_wrists", action="store_true", default=False, help="Record videos of the wrist camera observations.")
 
 # openpi-specific arguments
 parser.add_argument("--num_rollouts", type=int, default=10, help="Number of rollouts to perform.")
@@ -48,8 +49,8 @@ args_cli.enable_cameras = True
 # arguments check
 if args_cli.task is None:
     raise ValueError("task must be set.")
-if (args_cli.video or args_cli.video_obs) and args_cli.video_dir is None:
-    raise ValueError("video_dir must be specified when video or video_obs is set.")
+if (args_cli.record_scene or args_cli.record_table or args_cli.record_wrists) and args_cli.video_dir is None:
+    raise ValueError("video_dir must be specified when record_scene, record_table or record_wrists is set.")
 if args_cli.num_rollouts <= 0:
     raise ValueError("num_rollouts must be greater than 0.")
 
@@ -89,7 +90,6 @@ class RolloutControlsUI:
             width=300,
             height=200
         )
-        # self._window.
 
         with self._window.frame:
             with ui.VStack(spacing=5):
@@ -139,19 +139,24 @@ rollout_controls_ui = RolloutControlsUI()
 
 def main():
     """"OpenPi client for Isaac Lab environment."""
+    # Create video output directory
+    if args_cli.video_dir:
+        os.makedirs(args_cli.video_dir, exist_ok=True)
+
     # parse configuration
     env_cfg = parse_env_cfg(
         args_cli.task, device=args_cli.device, num_envs=1, use_fabric=not args_cli.disable_fabric
     )
     if args_cli.max_duration > 0.0:
         env_cfg.episode_length_s = args_cli.max_duration
+    env_fps = 1.0 / (env_cfg.sim.dt * env_cfg.decimation)
 
     # create environment
     print("[INFO]: Creating environment.")
     env = gym.make(args_cli.task, cfg=env_cfg, render_mode="rgb_array" if args_cli.video else None)
 
     # wrap environment for video recording of scene
-    if args_cli.video:
+    if args_cli.record_scene:
         video_kwargs = {
             "video_folder": args_cli.video_dir,
             "name_prefix": "scene",
@@ -187,7 +192,7 @@ def main():
             actions_from_chunk_completed = 0
             pred_action_chunk = None
 
-            # Prepare to save videos of camera observations
+            # Prepare to (potentially) save videos of camera observations
             wrist_cam_video, table_cam_video = [], []
 
             bar = tqdm.tqdm(range(int(env_cfg.episode_length_s / (env_cfg.sim.dt * float(env_cfg.decimation)))))
@@ -203,10 +208,11 @@ def main():
 
                 obs = extract_numpy_observation(env_obs)
 
-                # Save camera observations for video
-                if args_cli.video_obs:
-                    wrist_cam_video.append(obs["wrist_img"])
+                # Save camera observations for video recordings
+                if args_cli.record_table:
                     table_cam_video.append(obs["table_img"])
+                if args_cli.record_wrists:
+                    wrist_cam_video.append(obs["wrist_img"])
 
                 # Send websocket request to policy server if it's time to predict a new chunk
                 if actions_from_chunk_completed == 0 or actions_from_chunk_completed >= args_cli.open_loop_horizon:
@@ -248,12 +254,12 @@ def main():
                     break
 
             # Save camera observation videos to disk
-            if args_cli.video_obs:
-                env_fps = 1.0 / (env_cfg.sim.dt * env_cfg.decimation)
-                filename = os.path.join(args_cli.video_dir, "wrist-cam-episode-" + str(rollout_num - 1)) + ".mp4"
-                ImageSequenceClip(wrist_cam_video, fps=env_fps).write_videofile(filename, codec="libx264", logger=None)
+            if args_cli.record_table:
                 filename = os.path.join(args_cli.video_dir, "table-cam-episode-" + str(rollout_num - 1)) + ".mp4"
                 ImageSequenceClip(table_cam_video, fps=env_fps).write_videofile(filename, codec="libx264", logger=None)
+            if args_cli.record_wrist:
+                filename = os.path.join(args_cli.video_dir, "wrist-cam-episode-" + str(rollout_num - 1)) + ".mp4"
+                ImageSequenceClip(wrist_cam_video, fps=env_fps).write_videofile(filename, codec="libx264", logger=None)
 
             if rollout_num >= args_cli.num_rollouts or rollout_controls_ui.rollouts_stopped:
                 break

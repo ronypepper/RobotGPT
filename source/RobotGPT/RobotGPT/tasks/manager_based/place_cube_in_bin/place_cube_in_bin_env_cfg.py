@@ -12,6 +12,8 @@
 
 from dataclasses import MISSING
 
+from isaaclab_physx.physics import PhysxCfg
+
 import isaaclab.envs.mdp as mdp
 import isaaclab.sim as sim_utils
 from isaaclab.assets import ArticulationCfg, AssetBaseCfg, DeformableObjectCfg, RigidObjectCfg
@@ -50,7 +52,7 @@ class ObjectTableSceneCfg(InteractiveSceneCfg):
     # Table
     table = AssetBaseCfg(
         prim_path="{ENV_REGEX_NS}/table",
-        init_state=AssetBaseCfg.InitialStateCfg(pos=(0.5, 0, 0), rot=(0.707, 0, 0, 0.707)),
+        init_state=AssetBaseCfg.InitialStateCfg(pos=(0.5, 0, 0), rot=(0, 0, 0.707, 0.707)),
         spawn=UsdFileCfg(
             usd_path=f"{ISAAC_NUCLEUS_DIR}/Props/Mounts/SeattleLabTable/table_instanceable.usd",
             scale=(2.0, 1.0, 1.0),
@@ -82,7 +84,7 @@ class ObjectTableSceneCfg(InteractiveSceneCfg):
     # # end-effector marker
     # ee_marker = AssetBaseCfg(
     #     prim_path=MISSING,
-    #     init_state=RigidObjectCfg.InitialStateCfg(pos=(0.0, 0, 0.107), rot=(1, 0, 0, 0)),
+    #     init_state=RigidObjectCfg.InitialStateCfg(pos=(0.0, 0, 0.107), rot=(0, 0, 0, 1)),
     #     spawn=UsdFileCfg(
     #         usd_path=f"{ISAAC_NUCLEUS_DIR}/Props/UIElements/frame_prim.usd",
     #         scale=(0.1, 0.1, 0.1),
@@ -101,7 +103,7 @@ class ObjectTableSceneCfg(InteractiveSceneCfg):
         ),
         offset=CameraCfg.OffsetCfg(
             pos=(0.1009906081856474, -2.2170453280873081e-7, 0.005195286872436311),
-            rot=(0.17074, 0.68618, 0.68618, 0.17074), convention="opengl"
+            rot=(0.68618, 0.68618, 0.17074, 0.17074), convention="opengl"
         ),
     )
     # wrist_cam_vis = AssetBaseCfg(
@@ -124,7 +126,7 @@ class ObjectTableSceneCfg(InteractiveSceneCfg):
         ),
         offset=CameraCfg.OffsetCfg(
             pos=(-0.03890996200355793, 0.9736847657158553, 0.8084830725058005),
-            rot=(0.24249, 0.09143, -0.47766, -0.83945), convention="opengl"
+            rot=(0.09143, -0.47766, -0.83945, 0.24249), convention="opengl"
         ),
     )
     # table_cam_vis = AssetBaseCfg(
@@ -138,7 +140,7 @@ class ObjectTableSceneCfg(InteractiveSceneCfg):
     # props
     cube = RigidObjectCfg(
         prim_path="{ENV_REGEX_NS}/cube",
-        init_state=RigidObjectCfg.InitialStateCfg(pos=(0.5, 0.25, 0.05), rot=(1, 0, 0, 0)),
+        init_state=RigidObjectCfg.InitialStateCfg(pos=(0.5, 0.25, 0.05), rot=(0, 0, 0, 1)),
         spawn=UsdFileCfg(
             usd_path=f"{ISAAC_NUCLEUS_DIR}/Props/Blocks/blue_block.usd",
             scale=(1.5, 1.5, 1.5),
@@ -155,7 +157,7 @@ class ObjectTableSceneCfg(InteractiveSceneCfg):
 
     bin = RigidObjectCfg(
         prim_path="{ENV_REGEX_NS}/bin",
-        init_state=RigidObjectCfg.InitialStateCfg(pos=(0.5, -0.25, 0.05), rot=(1, 0, 0, 0)),
+        init_state=RigidObjectCfg.InitialStateCfg(pos=(0.5, -0.25, 0.05), rot=(0, 0, 0, 1)),
         spawn=UsdFileCfg(
             usd_path=f"{ISAAC_NUCLEUS_DIR}/Props/KLT_Bin/small_KLT.usd",
             scale=(1.0, 1.0, 1.0),
@@ -304,15 +306,16 @@ class PlaceCubeInBinEnvCfg(ManagerBasedRLEnvCfg):
         self.sim.dt = 0.01  # 100Hz
         self.sim.render_interval = self.decimation
 
-        self.sim.physx.bounce_threshold_velocity = 0.2
-        self.sim.physx.bounce_threshold_velocity = 0.01
-        self.sim.physx.gpu_found_lost_aggregate_pairs_capacity = 1024 * 1024 * 4
-        self.sim.physx.gpu_total_aggregate_pairs_capacity = 16 * 1024
-        self.sim.physx.friction_correlation_distance = 0.00625
+        self.sim.physics = PhysxCfg(
+            bounce_threshold_velocity=0.01,
+            gpu_found_lost_aggregate_pairs_capacity=1024 * 1024 * 4,
+            gpu_total_aggregate_pairs_capacity=16 * 1024,
+            friction_correlation_distance=0.00625,
+        )
 
         # Set settings for camera rendering
         self.num_rerenders_on_reset = 3
-        self.sim.render.antialiasing_mode = "DLAA"  # Use DLAA for higher quality rendering
+        self.sim.render.rendering_mode = 'balanced' # Reduce rendering quality for better performance (default is 'quality')
 
         self.viewer.eye = (2.0, 1.8, 1.5)
 

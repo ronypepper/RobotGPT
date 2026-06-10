@@ -76,7 +76,7 @@ class FrankaSingleArmPlaceCubeInBinEnvCfg(joint_pos_env_cfg.FrankaSingleArmPlace
         # Teleoperation
         self.xr: XrCfg = XrCfg(
             anchor_pos=(1.3, 0, -1.0),
-            anchor_rot=(0.70711, 0, 0, 0.70711),
+            anchor_rot=(0, 0, 0.70711, 0.70711),
         )
         self.teleop_devices = DevicesCfg(
             devices={

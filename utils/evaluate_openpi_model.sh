@@ -188,7 +188,7 @@ BG_PIDS+=("$!")
 echo "Starting simulation..."
 source ../env_isaaclab/bin/activate
 python ../RobotGPT/scripts/openpi_agent.py --task "$TASK" \
---device cpu --video --video_obs \
+--device cpu --record_table \
 --video_dir="evaluation/${TRAIN_CONFIG}/${DATASET}/${CHECKPOINT}" \
 --num_rollouts "$NUM_ROLLOUTS" --max_duration "$MAX_DURATION" "${KIT_ARGS[@]}"
 echo "Simulation stopped."
