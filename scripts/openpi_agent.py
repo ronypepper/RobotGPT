@@ -27,6 +27,8 @@ parser.add_argument("--task", type=str, default=None, help="Name of the task.")
 parser.add_argument("--record_scene", action="store_true", default=False, help="Record videos of the scene.")
 parser.add_argument("--record_table", action="store_true", default=False, help="Record videos of the table camera observations.")
 parser.add_argument("--record_wrists", action="store_true", default=False, help="Record videos of the wrist camera observations.")
+parser.add_argument("--annotate", action="store_true", default=False, help="Create an annotations.yaml file with success/fail and episode length information. An episode termination means success, while a truncation (time-out) a failure.")
+parser.add_argument("--output_dir", type=str, default=None, help="Videos and annotations will be saved to this path.")
 
 # openpi-specific arguments
 parser.add_argument("--num_rollouts", type=int, default=10, help="Number of rollouts to perform.")
@@ -34,9 +36,6 @@ parser.add_argument("--max_duration", type=float, default=0.0, help="Overrides d
 parser.add_argument("--open_loop_horizon", type=int, default=16, help="Number of actions to execute from a prediction before re-querying the policy.")
 parser.add_argument("--remote_host", type=str, default="0.0.0.0", help="IP address of the policy server.")
 parser.add_argument("--remote_port", type=int, default=8000, help="Port of the policy server.")
-
-# logging-specific arguments
-parser.add_argument("--video_dir", type=str, default=None, help="Videos will be saved to this path if video or video_obs is set.")
 
 # append AppLauncher cli args
 AppLauncher.add_app_launcher_args(parser)
@@ -49,8 +48,8 @@ args_cli.enable_cameras = True
 # arguments check
 if args_cli.task is None:
     raise ValueError("task must be set.")
-if (args_cli.record_scene or args_cli.record_table or args_cli.record_wrists) and args_cli.video_dir is None:
-    raise ValueError("video_dir must be specified when record_scene, record_table or record_wrists is set.")
+if (args_cli.record_scene or args_cli.record_table or args_cli.record_wrists or args_cli.annotate) and args_cli.output_dir is None:
+    raise ValueError("output_dir must be specified when record_scene, record_table, record_wrists or annotate is set.")
 if args_cli.num_rollouts <= 0:
     raise ValueError("num_rollouts must be greater than 0.")
 
@@ -69,6 +68,7 @@ import numpy as np
 import RobotGPT.tasks  # noqa: F401
 import torch
 import tqdm
+import yaml
 from moviepy import ImageSequenceClip
 from openpi_client import image_tools, websocket_client_policy
 
@@ -83,7 +83,7 @@ class RolloutControlsUI:
     def __init__(self):
         self.rollouts_stopped = False
         self.rollout_paused = False
-        self.rollout_completed = False
+        self.rollout_skipped = False
 
         self._window = ui.Window(
             "Rollout Controls",
@@ -94,16 +94,16 @@ class RolloutControlsUI:
         with self._window.frame:
             with ui.VStack(spacing=5):
                 ui.Button("Pause / Resume", clicked_fn=self._toggle_pause)
-                ui.Button("Complete Rollout", clicked_fn=self._complete_rollout)
+                ui.Button("Skip Rollout", clicked_fn=self._skip_rollout)
                 ui.Button("Stop Rollouts", clicked_fn=self._stop_rollouts)
 
     def _toggle_pause(self):
         self.rollout_paused = not self.rollout_paused
         print("[INFO] Rollout paused." if self.rollout_paused else "[INFO] Rollout resumed.")
 
-    def _complete_rollout(self):
-        self.rollout_completed = True
-        print("[INFO] Rollout completed.")
+    def _skip_rollout(self):
+        self.rollout_skipped = True
+        print("[INFO] Rollout skipped.")
 
     def _stop_rollouts(self):
         self.rollouts_stopped = True
@@ -139,9 +139,9 @@ rollout_controls_ui = RolloutControlsUI()
 
 def main():
     """"OpenPi client for Isaac Lab environment."""
-    # Create video output directory
-    if args_cli.video_dir:
-        os.makedirs(args_cli.video_dir, exist_ok=True)
+    # Create output directory
+    if args_cli.output_dir:
+        os.makedirs(args_cli.output_dir, exist_ok=True)
 
     # parse configuration
     env_cfg = parse_env_cfg(
@@ -153,12 +153,12 @@ def main():
 
     # create environment
     print("[INFO]: Creating environment.")
-    env = gym.make(args_cli.task, cfg=env_cfg, render_mode="rgb_array" if args_cli.video else None)
+    env = gym.make(args_cli.task, cfg=env_cfg, render_mode="rgb_array" if args_cli.record_scene else None)
 
     # wrap environment for video recording of scene
     if args_cli.record_scene:
         video_kwargs = {
-            "video_folder": args_cli.video_dir,
+            "video_folder": args_cli.output_dir,
             "name_prefix": "scene",
             "episode_trigger": lambda episode: True # record every episode
         }
@@ -180,6 +180,7 @@ def main():
     print("[INFO]: Connected to policy server.")
 
     # simulate environment
+    num_success, num_failure, num_invalid, durations = 0, 0, 0, []
     rollout_num = 0
     while simulation_app.is_running():
         # run everything in inference mode
@@ -238,31 +239,54 @@ def main():
                 env_obs, _, terminated, truncated, _ = env.step(action)
 
                 # Check if episode has ended
-                if terminated:
-                    print("[INFO]: Episode was terminated.")
+                if terminated[0]:
+                    print("[INFO]: Episode has terminated.")
+                    num_success += 1
+                    durations.append((t_step + 1) * env_cfg.sim.dt * env_cfg.decimation)
                     break
-                if truncated:
+                if truncated[0]:
                     print("[INFO]: Episode timed out.")
+                    num_failure += 1
                     break
-                # if max_sim_steps > 0 and env._sim_step_counter >= max_sim_steps:
-                #     print("[INFO]: Episode reached max duration.")
-                #     break
-                if rollout_controls_ui.rollout_completed:
-                    rollout_controls_ui.rollout_completed = False
+                if rollout_controls_ui.rollout_skipped:
+                    rollout_controls_ui.rollout_skipped = False
+                    num_invalid += 1
                     break
                 if rollout_controls_ui.rollouts_stopped:
                     break
 
             # Save camera observation videos to disk
             if args_cli.record_table:
-                filename = os.path.join(args_cli.video_dir, "table-cam-episode-" + str(rollout_num - 1)) + ".mp4"
+                filename = os.path.join(args_cli.output_dir, "table-cam-episode-" + str(rollout_num - 1)) + ".mp4"
                 ImageSequenceClip(table_cam_video, fps=env_fps).write_videofile(filename, codec="libx264", logger=None)
-            if args_cli.record_wrist:
-                filename = os.path.join(args_cli.video_dir, "wrist-cam-episode-" + str(rollout_num - 1)) + ".mp4"
+            if args_cli.record_wrists:
+                filename = os.path.join(args_cli.output_dir, "wrist-cam-episode-" + str(rollout_num - 1)) + ".mp4"
                 ImageSequenceClip(wrist_cam_video, fps=env_fps).write_videofile(filename, codec="libx264", logger=None)
 
             if rollout_num >= args_cli.num_rollouts or rollout_controls_ui.rollouts_stopped:
                 break
+
+    # Save annotations to disk
+    if args_cli.annotate:
+        avg_duration = 0.0
+        if num_success > 0:
+            avg_duration = sum(durations) / num_success
+
+        success_percentage = 0.0
+        if num_success + num_failure > 0:
+            success_percentage = num_success / (num_success + num_failure) * 100.0
+
+        annotations = {
+            "num_demos_total": num_success + num_failure + num_invalid,
+            "num_success": num_success,
+            "num_failure": num_failure,
+            "num_invalid": num_invalid,
+            "success_percentage": success_percentage,
+            "average_duration_s": avg_duration,
+        }
+
+        with open(os.path.join(args_cli.output_dir, "annotations.yaml"), "w") as f:
+            yaml.dump(annotations, f, sort_keys=False)
 
     # close the simulator
     env.close()

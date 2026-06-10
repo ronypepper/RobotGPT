@@ -101,7 +101,7 @@ class RobotGPTEvaluationAnnotator(QWidget):
 
     def update_slider_range(self, range):
         self.slider.setRange(0, range)
-    
+
     def keyPressEvent(self, event):
         if event.key() == Qt.Key.Key_Space:
             self.toggle_playback()
@@ -112,19 +112,19 @@ class RobotGPTEvaluationAnnotator(QWidget):
             self.player.setPlaybackRate(10.0)
         else:
             super().keyPressEvent(event)
-    
+
     def keyReleaseEvent(self, event):
         if event.key() == Qt.Key.Key_A or event.key() == Qt.Key.Key_D:
             self.player.setPlaybackRate(1.0)
         else:
             super().keyReleaseEvent(event)
-    
+
     def toggle_playback(self):
         if self.player.playbackState() == QMediaPlayer.PlayingState:
             self.player.pause()
         else:
             self.player.play()
-    
+
     def mark_demo_successful(self):
         self.annotate_demo(invalid=False, success=True)
         self.open_next_video()
@@ -132,11 +132,11 @@ class RobotGPTEvaluationAnnotator(QWidget):
     def mark_demo_failed(self):
         self.annotate_demo(invalid=False, success=False)
         self.open_next_video()
-    
+
     def mark_demo_invalid(self):
         self.annotate_demo(invalid=True)
         self.open_next_video()
-    
+
     def annotate_demo(self, invalid: bool, success: bool = False):
         result = "INVALID" if invalid else "SUCCESS" if success else "FAILURE"
         self.demo_annotations["demonstrations"].append({
@@ -144,7 +144,7 @@ class RobotGPTEvaluationAnnotator(QWidget):
                 "result": result,
                 "duration_s": self.player.position() / 1000.0 if success else 0.0
             })
-    
+
     def process_and_save_annotations(self):
         # Process annotations statistics
         num_success, num_failure, num_invalid = 0, 0, 0
@@ -158,16 +158,20 @@ class RobotGPTEvaluationAnnotator(QWidget):
                     num_failure += 1
                 case "INVALID":
                     num_invalid += 1
-        
+
         if num_success > 0:
             avg_duration /= num_success
+
+        success_percentage = 0.0
+        if num_success + num_failure > 0:
+            success_percentage = num_success / (num_success + num_failure) * 100.0
 
         # Add annotations statistics
         self.demo_annotations["num_demos_total"] = num_success + num_failure + num_invalid
         self.demo_annotations["num_success"] = num_success
         self.demo_annotations["num_failure"] = num_failure
         self.demo_annotations["num_invalid"] = num_invalid
-        self.demo_annotations["success_percentage"] = num_success / (num_success + num_failure) * 100.0
+        self.demo_annotations["success_percentage"] = success_percentage
         self.demo_annotations["average_duration_s"] = avg_duration
 
         # Save to yaml

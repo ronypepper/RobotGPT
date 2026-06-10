@@ -174,11 +174,9 @@ XLA_PYTHON_CLIENT_MEM_FRACTION=0.5 python openpi/scripts/serve_policy.py policy:
 source env_isaaclab/bin/activate
 python RobotGPT/scripts/openpi_agent.py --task RobotGPT-Place-Cube-In-Bin-Franka-Single-Arm-Pos-v0 \
 --viz kit --device cpu --record_scene --record_table --record_wrists \
---video_dir=robotgpt_output/evaluation/robotgpt_franka_single_arm_pi05_base
+--output_dir=robotgpt_output/evaluation/robotgpt_franka_single_arm_pi05_base
 ```
-<!-- 
-XLA_PYTHON_CLIENT_MEM_FRACTION=0.5 python openpi/scripts/serve_policy.py policy:checkpoint --policy.config=pi05_droid --policy.dir=gs://openpi-assets/checkpoints/pi05_base
-XLA_PYTHON_CLIENT_MEM_FRACTION=0.5 python openpi/scripts/serve_policy.py policy:checkpoint --policy.config=pi05_droid_jointpos_polaris --policy.dir=gs://openpi-assets/checkpoints/pi05_droid_jointpos -->
+
 
 # License
 
@@ -186,80 +184,3 @@ The RobotGPT repository, except for the "openpi/" directory, is an Isaac Lab pro
 Additionally, some files in the "script/" and "source/" directories are based on files from the [Isaac Lab GitHub repository](https://github.com/isaac-sim/IsaacLab).
 The RobotGPT repository is therefore licensed under the [BSD-3 License](LICENSE), like the Isaac Lab GitHub repository, except for the "openpi/" directory, which contains code to be used and partly based on scripts of the [openpi GitHub repository](https://github.com/Physical-Intelligence/openpi). The "openpi/" directory 
 is therefore licensed under [Apache 2.0](LICENSE-openpi), like the openpi GitHub repository.
-
-
-
-
-
-
-
-
-
-
-
-
-
-## XR demonstration collection with tracked motion controllers
-**Terminal 1: Start CloudXR**
-```
-source env_isaaclab/bin/activate
-python -m isaacteleop.cloudxr --accept-eula --cloudxr-env-config=RobotGPT/dev/quest3_cloudxr.env # Last argument enables optical hand tracking
-```
-**Terminal 2: Start task simulation with teleop and recording**
-```
-source env_isaaclab/bin/activate
-source ~/.cloudxr/run/cloudxr.env
-mkdir -p robotgpt_output/datasets/hdf5
-python RobotGPT/scripts/record_demos.py --task RobotGPT-Place-Cube-In-Bin-Franka-Single-Arm-IK-Abs-v0 \
---enable_cameras --device cpu --teleop_device motioncontroller --xr \
---dataset_file robotgpt_output/datasets/hdf5/dataset.hdf5 --num_demos 25
-```
-
-## HDF5 to LeRobot dataset conversion
-```
-source openpi/.venv/bin/activate
-export HF_LEROBOT_HOME="$(pwd)/robotgpt_output/datasets/lerobot"
-python -m robotgpt.convert_hdf5_to_openpi_lerobot --dataset robotgpt_output/datasets/hdf5/dataset.hdf5 \
---hf_user YOUR_USERNAME --robot_type franka_single_arm
-```
-
-## Openpi training (to resume a training run uncomment the --resume argument in last command)
-```
-source openpi/.venv/bin/activate
-export HF_LEROBOT_HOME="$(pwd)/robotgpt_output/datasets/lerobot"
-python -m robotgpt.compute_norm_stats --config-name robotgpt_franka_single_arm_pi05_lora --data.repo_id DATASET_NAME
-```
-```
-source openpi/.venv/bin/activate
-export HF_LEROBOT_HOME="$(pwd)/robotgpt_output/datasets/lerobot"
-XLA_PYTHON_CLIENT_MEM_FRACTION=0.9 python openpi/scripts/train.py robotgpt_franka_single_arm_pi05_lora \
---data.repo_id DATASET_NAME --exp-name=EXPERIMENT_NAME #--resume
-```
-
-## Openpi evaluation
-**Terminal 1: Start openpi policy server**
-```
-source openpi/.venv/bin/activate
-XLA_PYTHON_CLIENT_MEM_FRACTION=0.5 python openpi/scripts/serve_policy.py policy:checkpoint \
---policy.config=robotgpt_franka_single_arm_pi05_lora \
---policy.dir=robotgpt_output/checkpoints/robotgpt_franka_single_arm_pi05_lora/EXPERIMENT_NAME/4999
-```
-**Terminal 2:  Start task simulation with openpi client**
-```
-source env_isaaclab/bin/activate
-python RobotGPT/scripts/openpi_agent.py --task RobotGPT-Place-Cube-In-Bin-Franka-Single-Arm-Pos-v0 \
---device cpu --record_scene --record_table --record_wrists \
---video_dir=robotgpt_output/evaluation/robotgpt_franka_single_arm_pi05_lora/EXPERIMENT_NAME/4999
-```
-
-
-
-
-
-
-
-
-
-
-
-

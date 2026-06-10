@@ -9,6 +9,7 @@ DATASET=""
 CHECKPOINT=""
 NUM_ROLLOUTS=10
 MAX_DURATION=0
+AUTO_ANNOTATE=0
 VERBOSE=0
 
 while [[ $# -gt 0 ]]; do
@@ -48,6 +49,10 @@ while [[ $# -gt 0 ]]; do
             MAX_DURATION="$2"
             shift 2
             ;;
+        --auto_annotate)
+            AUTO_ANNOTATE=1
+            shift 1
+            ;;
         --verbose)
             VERBOSE=1
             shift 1
@@ -67,6 +72,7 @@ Required arguments:
 Optional:
   --num_rollouts    Number of rollouts to evaluate (default is 10)
   --max_duration    Overrides maximum episode length in seconds if specified
+  --auto_annotate   Do not save table cam videos and directly generate annotation.yaml for evaluation results. Requires an environment that defines success termination terms
   --verbose         Print logs and error messages
   -h, --help        Show this help message
 
@@ -184,11 +190,17 @@ cd ../../robotgpt_output
 ) &
 BG_PIDS+=("$!")
 
+# Reolve if table cam videos or annotations should be created
+OUTPUT_FLAG="--record_table"
+if [[ "$AUTO_ANNOTATE" -eq 1 ]]; then
+    OUTPUT_FLAG="--annotate"
+fi
+
 # Start task simulation with openpi client
 echo "Starting simulation..."
 source ../env_isaaclab/bin/activate
 python ../RobotGPT/scripts/openpi_agent.py --task "$TASK" \
---device cpu --record_table \
---video_dir="evaluation/${TRAIN_CONFIG}/${DATASET}/${CHECKPOINT}" \
+--device cpu $OUTPUT_FLAG \
+--output_dir="evaluation/${TRAIN_CONFIG}/${DATASET}/${CHECKPOINT}" \
 --num_rollouts "$NUM_ROLLOUTS" --max_duration "$MAX_DURATION" "${KIT_ARGS[@]}"
 echo "Simulation stopped."

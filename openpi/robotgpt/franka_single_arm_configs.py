@@ -16,7 +16,7 @@ Modifications: Copyright (c) 2026 ronypepper.
 License: Apache 2.0
 """
 
-import dataclasses
+from dataclasses import MISSING
 import pathlib
 
 import einops
@@ -174,14 +174,14 @@ franka_single_arm_configs = [
             pi05=True, paligemma_variant="gemma_2b_lora", action_expert_variant="gemma_300m_lora"
         ),
         data=FrankaSingleArmDataConfig(
-            repo_id="ronypepper/dataset2",
+            repo_id=MISSING,
             base_config=DataConfig(prompt_from_task=True),
             extra_delta_transform=True,
         ),
         weight_loader=weight_loaders.CheckpointWeightLoader("gs://openpi-assets/checkpoints/pi05_base/params"),
         num_train_steps=5_000,
-        save_interval=1_000,
-        keep_period=1_000,
+        save_interval=500,
+        keep_period=500,
         # The freeze filter defines which parameters should be frozen during training.
         freeze_filter=pi0_config.Pi0Config(
             pi05=True, paligemma_variant="gemma_2b_lora", action_expert_variant="gemma_300m_lora"
@@ -198,7 +198,7 @@ franka_single_arm_configs = [
             pi05=True,
         ),
         data=FrankaSingleArmDataConfig(
-            repo_id="ronypepper/dataset",
+            repo_id=MISSING,
             assets=AssetsConfig(
                 assets_dir="gs://openpi-assets/checkpoints/pi05_base/assets",
                 asset_id="franka",

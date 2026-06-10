@@ -11,19 +11,14 @@
 # SPDX-License-Identifier: BSD-3-Clause
 
 import isaaclab.envs.mdp as mdp
-from isaaclab.assets import RigidObjectCfg
-from isaaclab.sim.schemas.schemas_cfg import RigidBodyPropertiesCfg
-from isaaclab.sim.spawners.from_files.from_files_cfg import UsdFileCfg
 from isaaclab.utils import configclass
-from isaaclab.utils.assets import ISAAC_NUCLEUS_DIR
 
 from RobotGPT.tasks.manager_based.place_cube_in_bin.place_cube_in_bin_env_cfg import PlaceCubeInBinEnvCfg
 
 ##
 # Pre-defined configs
 ##
-from isaaclab.markers.config import FRAME_MARKER_CFG  # isort: skip
-from isaaclab_assets.robots.franka import FRANKA_PANDA_CFG, FRANKA_PANDA_HIGH_PD_CFG  # isort: skip
+from isaaclab_assets.robots.franka import FRANKA_PANDA_HIGH_PD_CFG  # isort: skip
 
 
 @configclass
@@ -46,10 +41,12 @@ class FrankaSingleArmPlaceCubeInBinEnvCfg(PlaceCubeInBinEnvCfg):
             "panda_finger_joint.*": 0.04,
         }
 
-        # Set actions for the specific robot type (franka)
+        # Set joint position actions for the specific robot type
         self.actions.arm_action = mdp.JointPositionActionCfg(
             asset_name="robot", joint_names=["panda_joint.*"], preserve_order=True, use_default_offset=False
         )
+
+        # Set gripper actions for the specific robot type
         self.actions.gripper_action = mdp.JointPositionActionCfg(
             asset_name="robot",
             joint_names=["panda_finger.*"],
@@ -58,26 +55,8 @@ class FrankaSingleArmPlaceCubeInBinEnvCfg(PlaceCubeInBinEnvCfg):
             use_default_offset=False
         )
 
+        # Set ee-marker anchor on robot
         # self.scene.ee_marker.prim_path="{ENV_REGEX_NS}/Robot/panda_hand/ee_marker"
 
         # Set wrist camera anchor on robot
         self.scene.wrist_cam.prim_path = "{ENV_REGEX_NS}/Robot/panda_hand/wrist_cam"
-
-        # # Listens to the required transforms
-        # marker_cfg = FRAME_MARKER_CFG.copy()
-        # marker_cfg.markers["frame"].scale = (0.1, 0.1, 0.1)
-        # marker_cfg.prim_path = "/Visuals/FrameTransformer"
-        # self.scene.ee_frame = FrameTransformerCfg(
-        #     prim_path="{ENV_REGEX_NS}/Robot/panda_link0",
-        #     debug_vis=False,
-        #     visualizer_cfg=marker_cfg,
-        #     target_frames=[
-        #         FrameTransformerCfg.FrameCfg(
-        #             prim_path="{ENV_REGEX_NS}/Robot/panda_hand",
-        #             name="end_effector",
-        #             offset=OffsetCfg(
-        #                 pos=(0.0, 0.0, 0.1034),
-        #             ),
-        #         ),
-        #     ],
-        # )

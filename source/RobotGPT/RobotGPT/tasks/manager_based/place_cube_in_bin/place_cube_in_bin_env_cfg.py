@@ -10,29 +10,23 @@
 #
 # SPDX-License-Identifier: BSD-3-Clause
 
-from dataclasses import MISSING
-
-from isaaclab_physx.physics import PhysxCfg
-
 import isaaclab.envs.mdp as mdp
-import isaaclab.sim as sim_utils
-from isaaclab.assets import ArticulationCfg, AssetBaseCfg, DeformableObjectCfg, RigidObjectCfg
-from isaaclab.envs import ManagerBasedRLEnvCfg
+from isaaclab.assets import RigidObjectCfg
 from isaaclab.managers import EventTermCfg as EventTerm
-from isaaclab.managers import ObservationGroupCfg as ObsGroup
-from isaaclab.managers import ObservationTermCfg as ObsTerm
 from isaaclab.managers import SceneEntityCfg
 from isaaclab.managers import TerminationTermCfg as DoneTerm
-from isaaclab.scene import InteractiveSceneCfg
-from isaaclab.sensors import CameraCfg
 from isaaclab.sim.schemas.schemas_cfg import RigidBodyPropertiesCfg
-from isaaclab.sim.spawners.from_files.from_files_cfg import GroundPlaneCfg, UsdFileCfg
+from isaaclab.sim.spawners.from_files.from_files_cfg import UsdFileCfg
 from isaaclab.utils import configclass
-from isaaclab.utils.assets import ISAAC_NUCLEUS_DIR, NVIDIA_NUCLEUS_DIR
+from isaaclab.utils.assets import ISAAC_NUCLEUS_DIR
 
-import RobotGPT.tasks.manager_based.place_cube_in_bin.randomize_utils as randomize_utils
-from RobotGPT.utils.mdp.env_step_differential_ik_action import EnvStepDifferentialInverseKinematicsActionCfg
-from RobotGPT.utils.mdp.image_converted_for_openpi import image_converted_for_openpi
+from RobotGPT.tasks.manager_based.robotgpt_env_cfg import (
+    RobotGPTBaseSceneCfg,
+    RobotGPTEnvCfg,
+    RobotGPTEventCfg,
+    RobotGPTTerminationsCfg,
+)
+from RobotGPT.utils.mdp.object_in_container import object_in_container
 
 ##
 # Scene definition
@@ -40,102 +34,8 @@ from RobotGPT.utils.mdp.image_converted_for_openpi import image_converted_for_op
 
 
 @configclass
-class ObjectTableSceneCfg(InteractiveSceneCfg):
-    """Configuration for the place cube in bin scene.
-    This is the abstract base implementation, the exact scene is defined in the derived classes
-    which need to set the robot, as well as prim paths to the wrist camera mounts.
-    """
-
-    # robots: will be populated by agent env cfg
-    robot: ArticulationCfg = MISSING
-
-    # Table
-    table = AssetBaseCfg(
-        prim_path="{ENV_REGEX_NS}/table",
-        init_state=AssetBaseCfg.InitialStateCfg(pos=(0.5, 0, 0), rot=(0, 0, 0.707, 0.707)),
-        spawn=UsdFileCfg(
-            usd_path=f"{ISAAC_NUCLEUS_DIR}/Props/Mounts/SeattleLabTable/table_instanceable.usd",
-            scale=(2.0, 1.0, 1.0),
-        )
-    )
-
-    # # plane
-    # plane = AssetBaseCfg(
-    #     prim_path="/World/GroundPlane",
-    #     init_state=AssetBaseCfg.InitialStateCfg(pos=(0, 0, -1.05)),
-    #     spawn=GroundPlaneCfg(),
-    # )
-
-    # usd background
-    background = AssetBaseCfg(
-        prim_path="/World/background",
-        init_state=AssetBaseCfg.InitialStateCfg(pos=(0, 0, -1)),
-        spawn=UsdFileCfg(
-            usd_path=f"{ISAAC_NUCLEUS_DIR}/Environments/Simple_Warehouse/warehouse.usd",
-        ),
-    )
-
-    # lights
-    light = AssetBaseCfg(
-        prim_path="/World/light",
-        spawn=sim_utils.DomeLightCfg(color=(0.75, 0.75, 0.75), intensity=3000.0),
-    )
-
-    # # end-effector marker
-    # ee_marker = AssetBaseCfg(
-    #     prim_path=MISSING,
-    #     init_state=RigidObjectCfg.InitialStateCfg(pos=(0.0, 0, 0.107), rot=(0, 0, 0, 1)),
-    #     spawn=UsdFileCfg(
-    #         usd_path=f"{ISAAC_NUCLEUS_DIR}/Props/UIElements/frame_prim.usd",
-    #         scale=(0.1, 0.1, 0.1),
-    #     )
-    # )
-
-    # wrist view camera + visualization
-    wrist_cam = CameraCfg(
-        prim_path=MISSING,
-        update_period=0.0,
-        height=480,
-        width=640,
-        data_types=["rgb"],
-        spawn=sim_utils.PinholeCameraCfg(
-            focal_length=2.1, focus_distance=28.0, horizontal_aperture=5.376, vertical_aperture=3.024
-        ),
-        offset=CameraCfg.OffsetCfg(
-            pos=(0.1009906081856474, -2.2170453280873081e-7, 0.005195286872436311),
-            rot=(0.68618, 0.68618, 0.17074, 0.17074), convention="opengl"
-        ),
-    )
-    # wrist_cam_vis = AssetBaseCfg(
-    #     prim_path="{ENV_REGEX_NS}/Robot/panda_hand/wrist_cam/wrist_cam_visualization",
-    #     spawn=sim_utils.CuboidCfg(
-    #         size=(0.15, 0.05, 0.05),
-    #         visual_material=sim_utils.PreviewSurfaceCfg(diffuse_color=(1.0, 0.0, 0.0)),
-    #     )
-    # )
-
-    # table view camera + visualization
-    table_cam = CameraCfg(
-        prim_path="{ENV_REGEX_NS}/table_cam",
-        update_period=0.0,
-        height=480,
-        width=640,
-        data_types=["rgb"],
-        spawn=sim_utils.PinholeCameraCfg(
-            focal_length=2.1, focus_distance=28.0, horizontal_aperture=5.376, vertical_aperture=3.024
-        ),
-        offset=CameraCfg.OffsetCfg(
-            pos=(-0.03890996200355793, 0.9736847657158553, 0.8084830725058005),
-            rot=(0.09143, -0.47766, -0.83945, 0.24249), convention="opengl"
-        ),
-    )
-    # table_cam_vis = AssetBaseCfg(
-    #     prim_path="{ENV_REGEX_NS}/table_cam/table_cam_visualization",
-    #     spawn=sim_utils.CuboidCfg(
-    #         size=(0.15, 0.05, 0.05),
-    #         visual_material=sim_utils.PreviewSurfaceCfg(diffuse_color=(1.0, 0.0, 0.0)),
-    #     )
-    # )
+class PlaceCubeInBinSceneCfg(RobotGPTBaseSceneCfg):
+    """Scene specification."""
 
     # props
     cube = RigidObjectCfg(
@@ -179,43 +79,8 @@ class ObjectTableSceneCfg(InteractiveSceneCfg):
 
 
 @configclass
-class ActionsCfg:
-    """Action specifications for the MDP."""
-
-    # will be set by agent env cfg
-    arm_action: mdp.JointPositionActionCfg | mdp.JointVelocityActionCfg | mdp.DifferentialInverseKinematicsActionCfg | EnvStepDifferentialInverseKinematicsActionCfg = MISSING
-    gripper_action: mdp.JointPositionActionCfg | mdp.BinaryJointPositionActionCfg = MISSING
-
-
-@configclass
-class ObservationsCfg:
-    """Observation specifications for the MDP."""
-
-    @configclass
-    class PolicyCfg(ObsGroup):
-        """Observations for policy group."""
-
-        joint_pos = ObsTerm(func=mdp.joint_pos)
-        table_img = ObsTerm(
-            func=image_converted_for_openpi, params={"sensor_cfg": SceneEntityCfg("table_cam"), "data_type": "rgb", "normalize": False}
-        )
-        wrist_img = ObsTerm(
-            func=image_converted_for_openpi, params={"sensor_cfg": SceneEntityCfg("wrist_cam"), "data_type": "rgb", "normalize": False}
-        )
-
-        def __post_init__(self):
-            self.enable_corruption = False
-            self.concatenate_terms = False
-
-    # observation groups
-    policy: PolicyCfg = PolicyCfg()
-
-
-@configclass
-class EventCfg:
+class PlaceCubeInBinEventCfg(RobotGPTEventCfg):
     """Configuration for events."""
-
-    reset_all = EventTerm(func=mdp.reset_scene_to_default, mode="reset")
 
     randomize_bin_position = EventTerm(
         func=mdp.reset_root_state_uniform,
@@ -237,37 +102,19 @@ class EventCfg:
         },
     )
 
-    randomize_light = EventTerm(
-        func=randomize_utils.randomize_scene_lighting_domelight,
-        mode="reset",
-        params={
-            "intensity_range": (1500.0, 10000.0),
-            "color_variation": 0.4,
-            "textures": [
-                f"{NVIDIA_NUCLEUS_DIR}/Assets/Skies/Cloudy/abandoned_parking_4k.hdr",
-                f"{NVIDIA_NUCLEUS_DIR}/Assets/Skies/Cloudy/evening_road_01_4k.hdr",
-                f"{NVIDIA_NUCLEUS_DIR}/Assets/Skies/Cloudy/lakeside_4k.hdr",
-                f"{NVIDIA_NUCLEUS_DIR}/Assets/Skies/Indoor/autoshop_01_4k.hdr",
-                f"{NVIDIA_NUCLEUS_DIR}/Assets/Skies/Indoor/carpentry_shop_01_4k.hdr",
-                f"{NVIDIA_NUCLEUS_DIR}/Assets/Skies/Indoor/hospital_room_4k.hdr",
-                f"{NVIDIA_NUCLEUS_DIR}/Assets/Skies/Indoor/hotel_room_4k.hdr",
-                f"{NVIDIA_NUCLEUS_DIR}/Assets/Skies/Indoor/old_bus_depot_4k.hdr",
-                f"{NVIDIA_NUCLEUS_DIR}/Assets/Skies/Indoor/small_empty_house_4k.hdr",
-                f"{NVIDIA_NUCLEUS_DIR}/Assets/Skies/Indoor/surgery_4k.hdr",
-                f"{NVIDIA_NUCLEUS_DIR}/Assets/Skies/Studio/photo_studio_01_4k.hdr",
-            ],
-            "default_intensity": 3000.0,
-            "default_color": (0.75, 0.75, 0.75),
-            "default_texture": "",
-        },
-    )
-
 
 @configclass
-class TerminationsCfg:
+class PlaceCubeInBinTerminationsCfg(RobotGPTTerminationsCfg):
     """Termination terms for the MDP."""
 
-    time_out = DoneTerm(func=mdp.time_out, time_out=True)
+    success = DoneTerm(func=object_in_container, params={
+            "object_cfg": SceneEntityCfg("cube"),
+            "container_cfg": SceneEntityCfg("bin"),
+            "container_halfsize_x": 9.971924 / 100,
+            "container_halfsize_y": 14.951359 / 100,
+            "container_halfsize_z": 13.640263 / 2 / 100,
+        }
+    )
 
 
 ##
@@ -276,61 +123,15 @@ class TerminationsCfg:
 
 
 @configclass
-class PlaceCubeInBinEnvCfg(ManagerBasedRLEnvCfg):
+class PlaceCubeInBinEnvCfg(RobotGPTEnvCfg):
     """Configuration for the place cube in bin environment."""
 
     # Scene settings
-    scene: ObjectTableSceneCfg = ObjectTableSceneCfg(num_envs=1, env_spacing=2.5, replicate_physics=False)
-    # Basic settings
-    observations: ObservationsCfg = ObservationsCfg()
-    actions: ActionsCfg = ActionsCfg()
+    scene: PlaceCubeInBinSceneCfg = PlaceCubeInBinSceneCfg(num_envs=1, env_spacing=2.5, replicate_physics=False)
 
     # MDP settings
-    events: EventCfg = EventCfg()
-    terminations: TerminationsCfg = TerminationsCfg()
-
-    # Unused managers
-    commands = None
-    rewards = None
-    curriculum = None
+    events: PlaceCubeInBinEventCfg = PlaceCubeInBinEventCfg()
+    terminations: PlaceCubeInBinTerminationsCfg = PlaceCubeInBinTerminationsCfg()
 
     # Prompt for the openpi policy.
-    prompt: str = "Pick up the blue cube and drop it in the bin" #MISSING
-
-    def __post_init__(self):
-        """Post initialization."""
-        # general settings
-        self.decimation = 5
-        self.episode_length_s = 30.0
-        # simulation settings
-        self.sim.dt = 0.01  # 100Hz
-        self.sim.render_interval = self.decimation
-
-        self.sim.physics = PhysxCfg(
-            bounce_threshold_velocity=0.01,
-            gpu_found_lost_aggregate_pairs_capacity=1024 * 1024 * 4,
-            gpu_total_aggregate_pairs_capacity=16 * 1024,
-            friction_correlation_distance=0.00625,
-        )
-
-        # Set settings for camera rendering
-        self.num_rerenders_on_reset = 3
-        self.sim.render.rendering_mode = 'balanced' # Reduce rendering quality for better performance (default is 'quality')
-
-        self.viewer.eye = (2.0, 1.8, 1.5)
-
-    def get_ep_meta(self):
-        ep_meta = dict()
-
-        # Add basic episode metadata
-        ep_meta["sim_args"] = {
-            "dt": self.sim.dt,
-            "decimation": self.decimation,
-            "render_interval": self.sim.render_interval,
-            "num_envs": self.scene.num_envs,
-        }
-
-        # Add prompt
-        ep_meta['prompt'] = self.prompt
-
-        return ep_meta
+    prompt: str = "Pick up the blue cube and drop it in the bin"
