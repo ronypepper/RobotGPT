@@ -82,9 +82,9 @@ class ControllerSe3RelRetargeter(RetargeterBase):
             self._goal_marker = VisualizationMarkers(frame_marker_cfg.replace(prim_path="/Visuals/ee_goal"))
             self._goal_marker.set_visibility(True)
             self._visualization_pos = np.zeros(3)
-            self._visualization_rot = np.array([1.0, 0.0, 0.0, 0.0])
+            self._visualization_rot = np.array([0.0, 0.0, 0.0, 1.0])
 
-        self._previous_pose = np.array([0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0], dtype=np.float32)
+        self._previous_pose = np.array([0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0], dtype=np.float32)
 
     def retarget(self, data: dict) -> torch.Tensor:
         """Convert controller pose to robot end-effector command.
@@ -129,8 +129,8 @@ class ControllerSe3RelRetargeter(RetargeterBase):
             np.ndarray: 6D array with position delta (xyz) and rotation delta as axis-angle (rx,ry,rz)
         """
         delta_pos = joint_pose[:3] - previous_joint_pose[:3]
-        abs_rotation = Rotation.from_quat([*joint_pose[4:7], joint_pose[3]])
-        previous_rot = Rotation.from_quat([*previous_joint_pose[4:7], previous_joint_pose[3]])
+        abs_rotation = Rotation.from_quat(joint_pose[3:7])
+        previous_rot = Rotation.from_quat(previous_joint_pose[3:7])
         relative_rotation = abs_rotation * previous_rot.inv()
         return np.concatenate([delta_pos, relative_rotation.as_rotvec()])
 
@@ -167,12 +167,11 @@ class ControllerSe3RelRetargeter(RetargeterBase):
         # Update visualization if enabled
         if self._enable_visualization:
             # Convert rotation vector to quaternion and combine with current rotation
-            delta_quat = Rotation.from_rotvec(rotation).as_quat()  # x, y, z, w format
+            delta_quat = Rotation.from_rotvec(rotation).as_quat()
             current_rot = Rotation.from_quat([self._visualization_rot[1:], self._visualization_rot[0]])
             new_rot = Rotation.from_quat(delta_quat) * current_rot
             self._visualization_pos = self._visualization_pos + position
-            # Convert back to w, x, y, z format
-            self._visualization_rot = np.array([new_rot.as_quat()[3], *new_rot.as_quat()[:3]])
+            self._visualization_rot = new_rot.as_quat()
             self._update_visualization()
 
         return np.concatenate([position, rotation])
@@ -182,7 +181,7 @@ class ControllerSe3RelRetargeter(RetargeterBase):
         if self._enable_visualization:
             trans = np.array([self._visualization_pos])
             quat = Rotation.from_matrix(self._visualization_rot).as_quat()
-            rot = np.array([np.array([quat[3], quat[0], quat[1], quat[2]])])
+            rot = np.array([quat])
             self._goal_marker.visualize(translations=trans, orientations=rot)
 
 

@@ -12,12 +12,12 @@
 
 from isaaclab.utils import configclass
 
-from RobotGPT.tasks.manager_based.place_cube_in_bin.place_cube_in_bin_env_cfg import PlaceCubeInBinEnvCfg
+from RobotGPT.tasks.manager_based.fold_towel.fold_towel_env_cfg import FoldTowelEnvCfg
 from RobotGPT.utils.robots.franka_single_arm import setup_franka_single_arm_joint_pos_env
 
 
 @configclass
-class FrankaSingleArmPlaceCubeInBinEnvCfg(PlaceCubeInBinEnvCfg):
+class FrankaSingleArmFoldTowelEnvCfg(FoldTowelEnvCfg):
     def __post_init__(self):
         # post init of parent
         super().__post_init__()

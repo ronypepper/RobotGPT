@@ -23,7 +23,7 @@ from isaaclab_physx.physics import PhysxCfg
 
 import isaaclab.envs.mdp as mdp
 import isaaclab.sim as sim_utils
-from isaaclab.assets import ArticulationCfg, AssetBaseCfg
+from isaaclab.assets import ArticulationCfg, AssetBaseCfg, RigidObjectCfg
 from isaaclab.envs import ManagerBasedRLEnvCfg
 from isaaclab.managers import EventTermCfg as EventTerm
 from isaaclab.managers import ObservationGroupCfg as ObsGroup
@@ -36,9 +36,9 @@ from isaaclab.sim.spawners.from_files.from_files_cfg import UsdFileCfg
 from isaaclab.utils import configclass
 from isaaclab.utils.assets import ISAAC_NUCLEUS_DIR, NVIDIA_NUCLEUS_DIR
 
-from RobotGPT.tasks.manager_based.place_cube_in_bin.randomize_utils import randomize_scene_lighting_domelight
 from RobotGPT.utils.mdp.env_step_differential_ik_action import EnvStepDifferentialInverseKinematicsActionCfg
 from RobotGPT.utils.mdp.image_converted_for_openpi import image_converted_for_openpi
+from RobotGPT.utils.mdp.randomize_utils import randomize_scene_lighting_domelight
 
 ##
 # Scene definition
@@ -49,46 +49,43 @@ from RobotGPT.utils.mdp.image_converted_for_openpi import image_converted_for_op
 class RobotGPTBaseSceneCfg(InteractiveSceneCfg):
     """Scene specification."""
 
-    # robot
+    #
+    # Embodiment
+    #
+
+    # Robot
     robot: ArticulationCfg = MISSING
 
-    # table
-    table = AssetBaseCfg(
-        prim_path="{ENV_REGEX_NS}/table",
-        init_state=AssetBaseCfg.InitialStateCfg(pos=(0.5, 0, 0), rot=(0, 0, 0.707, 0.707)),
-        spawn=UsdFileCfg(
-            usd_path=f"{ISAAC_NUCLEUS_DIR}/Props/Mounts/SeattleLabTable/table_instanceable.usd",
-            scale=(2.0, 1.0, 1.0),
+    # Second robot, used by bimanual setups with two individual robot arms (eg. bimanual franka setup)
+    # In these cases, this is the right arm (seen from behind the robot looking at workspace)
+    robot_2: ArticulationCfg | None = None
+
+    # End-effector markers for debug visualization
+    ee_marker : AssetBaseCfg | None = None
+    ee_marker_2 : AssetBaseCfg | None = None
+
+    # Helper for initializing end-effector markers
+    def initialize_ee_marker(self, dual_arm: bool):
+        self.ee_marker = AssetBaseCfg(
+            prim_path=MISSING,
+            init_state=RigidObjectCfg.InitialStateCfg(pos=(0.0, 0, 0.107), rot=(0, 0, 0, 1)),
+            spawn=UsdFileCfg(
+                usd_path=f"{ISAAC_NUCLEUS_DIR}/Props/UIElements/frame_prim.usd",
+                scale=(0.1, 0.1, 0.1),
+            )
         )
-    )
+        if dual_arm:
+            self.ee_marker_2 = AssetBaseCfg(
+                prim_path=MISSING,
+                init_state=RigidObjectCfg.InitialStateCfg(pos=(0.0, 0, 0.107), rot=(0, 0, 0, 1)),
+                spawn=UsdFileCfg(
+                    usd_path=f"{ISAAC_NUCLEUS_DIR}/Props/UIElements/frame_prim.usd",
+                    scale=(0.1, 0.1, 0.1),
+                )
+            )
 
-    # background
-    background = AssetBaseCfg(
-        prim_path="/World/background",
-        init_state=AssetBaseCfg.InitialStateCfg(pos=(0, 0, -1)),
-        spawn=UsdFileCfg(
-            usd_path=f"{ISAAC_NUCLEUS_DIR}/Environments/Simple_Warehouse/warehouse.usd",
-        ),
-    )
-
-    # lights
-    light = AssetBaseCfg(
-        prim_path="/World/light",
-        spawn=sim_utils.DomeLightCfg(color=(0.75, 0.75, 0.75), intensity=3000.0),
-    )
-
-    # # end-effector marker
-    # ee_marker = AssetBaseCfg(
-    #     prim_path=MISSING,
-    #     init_state=RigidObjectCfg.InitialStateCfg(pos=(0.0, 0, 0.107), rot=(0, 0, 0, 1)),
-    #     spawn=UsdFileCfg(
-    #         usd_path=f"{ISAAC_NUCLEUS_DIR}/Props/UIElements/frame_prim.usd",
-    #         scale=(0.1, 0.1, 0.1),
-    #     )
-    # )
-
-    # wrist view camera
-    wrist_cam = CameraCfg(
+    # Wrist view cameras
+    left_wrist_cam = CameraCfg(
         prim_path=MISSING,
         update_period=0.0,
         height=480,
@@ -103,7 +100,26 @@ class RobotGPTBaseSceneCfg(InteractiveSceneCfg):
         ),
     )
 
-    # table view camera
+    right_wrist_cam : CameraCfg | None = None
+
+    # Helper for initializing right wrist camera in dual arm setups
+    def initialize_right_wrist_camera(self):
+        self.right_wrist_cam = CameraCfg(
+            prim_path=MISSING,
+            update_period=0.0,
+            height=480,
+            width=640,
+            data_types=["rgb"],
+            spawn=sim_utils.PinholeCameraCfg(
+                focal_length=2.1, focus_distance=28.0, horizontal_aperture=5.376, vertical_aperture=3.024
+            ),
+            offset=CameraCfg.OffsetCfg(
+                pos=(0.1009906081856474, -2.2170453280873081e-7, 0.005195286872436311),
+                rot=(0.68618, 0.68618, 0.17074, 0.17074), convention="opengl"
+            ),
+        )
+
+    # Table view camera
     table_cam = CameraCfg(
         prim_path="{ENV_REGEX_NS}/table_cam",
         update_period=0.0,
@@ -117,6 +133,35 @@ class RobotGPTBaseSceneCfg(InteractiveSceneCfg):
             pos=(-0.03890996200355793, 0.9736847657158553, 0.8084830725058005),
             rot=(0.09143, -0.47766, -0.83945, 0.24249), convention="opengl"
         ),
+    )
+
+    #
+    # Scene
+    #
+
+    # Table
+    table = AssetBaseCfg(
+        prim_path="{ENV_REGEX_NS}/table",
+        init_state=AssetBaseCfg.InitialStateCfg(pos=(0.5, 0, 0), rot=(0, 0, 0.707, 0.707)),
+        spawn=UsdFileCfg(
+            usd_path=f"{ISAAC_NUCLEUS_DIR}/Props/Mounts/SeattleLabTable/table_instanceable.usd",
+            scale=(2.0, 1.0, 1.0),
+        )
+    )
+
+    # Background
+    background = AssetBaseCfg(
+        prim_path="/World/background",
+        init_state=AssetBaseCfg.InitialStateCfg(pos=(0, 0, -1)),
+        spawn=UsdFileCfg(
+            usd_path=f"{ISAAC_NUCLEUS_DIR}/Environments/Simple_Warehouse/warehouse.usd",
+        ),
+    )
+
+    # Lights
+    light = AssetBaseCfg(
+        prim_path="/World/light",
+        spawn=sim_utils.DomeLightCfg(color=(0.75, 0.75, 0.75), intensity=3000.0),
     )
 
 
@@ -133,13 +178,17 @@ class RobotGPTActionsCfg:
     arm_action: mdp.JointPositionActionCfg | EnvStepDifferentialInverseKinematicsActionCfg = MISSING
     gripper_action: mdp.JointPositionActionCfg | mdp.BinaryJointPositionActionCfg = MISSING
 
+    # second arm actions (used by bimanual franka setup)
+    arm_action_2: mdp.JointPositionActionCfg | EnvStepDifferentialInverseKinematicsActionCfg | None = None
+    gripper_action_2: mdp.JointPositionActionCfg | mdp.BinaryJointPositionActionCfg | None = None
+
 
 @configclass
 class RobotGPTObservationsCfg:
     """Observation specifications for the MDP."""
 
     @configclass
-    class PolicyCfg(ObsGroup):
+    class SingleArmPolicyCfg(ObsGroup):
         """Observations for policy group."""
 
         joint_pos = ObsTerm(func=mdp.joint_pos)
@@ -148,7 +197,26 @@ class RobotGPTObservationsCfg:
                                                      "data_type": "rgb", "normalize": False}
         )
         wrist_img = ObsTerm(
-            func=image_converted_for_openpi, params={"sensor_cfg": SceneEntityCfg("wrist_cam"),
+            func=image_converted_for_openpi, params={"sensor_cfg": SceneEntityCfg("left_wrist_cam"),
+                                                     "data_type": "rgb", "normalize": False}
+        )
+
+        def __post_init__(self):
+            self.enable_corruption = False
+            self.concatenate_terms = False
+
+    @configclass
+    class DualArmPolicyCfg(ObsGroup):
+        """Observations for policy group."""
+
+        left_joint_pos = ObsTerm(func=mdp.joint_pos, params={"asset_cfg": SceneEntityCfg("robot")})
+        right_joint_pos = ObsTerm(func=mdp.joint_pos, params={"asset_cfg": SceneEntityCfg("robot_2")})
+        left_wrist_img = ObsTerm(
+            func=image_converted_for_openpi, params={"sensor_cfg": SceneEntityCfg("left_wrist_cam"),
+                                                     "data_type": "rgb", "normalize": False}
+        )
+        right_wrist_img = ObsTerm(
+            func=image_converted_for_openpi, params={"sensor_cfg": SceneEntityCfg("right_wrist_cam"),
                                                      "data_type": "rgb", "normalize": False}
         )
 
@@ -157,7 +225,7 @@ class RobotGPTObservationsCfg:
             self.concatenate_terms = False
 
     # observation groups
-    policy: PolicyCfg = PolicyCfg()
+    policy: SingleArmPolicyCfg | DualArmPolicyCfg = SingleArmPolicyCfg()
 
 
 @configclass

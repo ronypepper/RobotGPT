@@ -1,6 +1,6 @@
 """
-This script defines classes/configs for interfacing/training openpi models with the Isaac Lab environments of the
-RobotGPT repository, as well as with datasets created using these environments.
+This script defines classes/configs for interfacing/training openpi models with the Isaac Lab environments of a specific
+ robot type of the RobotGPT repository, as well as with datasets created using these environments.
 
 Three main components are defined:
 - *Input / *Output classes that define the data mapping from the Isaac Lab environment to the model and vice versa.
@@ -16,46 +16,61 @@ Modifications: Copyright (c) 2026 ronypepper.
 License: Apache 2.0
 """
 
-from dataclasses import MISSING
+import dataclasses
 import pathlib
 
-import einops
+import h5py
 import numpy as np
-from typing_extensions import override
-
-from openpi import transforms
-from openpi.models import model as _model
 import openpi.models.pi0_config as pi0_config
-from openpi.training.config import AssetsConfig
-from openpi.training.config import DataConfig
-from openpi.training.config import DataConfigFactory
-from openpi.training.config import ModelTransformFactory
-from openpi.training.config import TrainConfig
 import openpi.training.weight_loaders as weight_loaders
 import openpi.transforms as _transforms
+from openpi.models import model as _model
+from openpi.training.config import AssetsConfig, DataConfig, DataConfigFactory, ModelTransformFactory, TrainConfig
+from robotgpt.parse_image import _parse_image
+from typing_extensions import override
+from tyro import MISSING
+
+from openpi import transforms
 
 
-def make_franka_example() -> dict:
-    """Creates a random input example."""
+def get_data_dimensions_franka_dual_arm():
     return {
-        "observation/state": np.random.rand(8),
-        "observation/table_img": np.random.randint(256, size=(224, 224, 3), dtype=np.uint8),
-        "observation/wrist_img": np.random.randint(256, size=(224, 224, 3), dtype=np.uint8),
-        "prompt": "do something",
+        "actions": 16,
+        "state": 16, # proprioceptive observation, i.e. joint & gripper positions
+        "img_width": 224,
+        "img_height": 224,
     }
 
 
-def _parse_image(image) -> np.ndarray:
-    image = np.asarray(image)
-    if np.issubdtype(image.dtype, np.floating):
-        image = (255 * image).astype(np.uint8)
-    if image.shape[0] == 3:
-        image = einops.rearrange(image, "c h w -> h w c")
-    return image
+def process_hdf5_frame_franka_dual_arm(demo: h5py.Group, step: int) -> dict:
+    # Pi0 models are trained for gripper positions in [0.0, 1.0], with 0.0 corresponding to fully open and 1.0 corresponding to fully closed.
+    # Observations in the dataset are in [0.0, 0.04], with 0.0 corresponding to fully closed and 0.04 corresponding to fully open.
+    # Therefore we adjust the gripper observation to fit the Pi0 models' format. For actions, we can extract the gripper command directly in this format.
+    left_joint_pos = demo["obs"]["left_joint_pos"][step][:8] # 7 joints + 1 gripper
+    left_joint_pos[7] = (left_joint_pos[7] - 0.04) / 0.04
+
+    right_joint_pos = demo["obs"]["right_joint_pos"][step][:8] # 7 joints + 1 gripper
+    right_joint_pos[7] = (right_joint_pos[7] - 0.04) / 0.04
+
+    joint_pos = np.concatenate((left_joint_pos, right_joint_pos))
+
+    left_joint_pos_actions = demo["processed_actions"][step][:7]
+    right_joint_pos_actions = demo["processed_actions"][step][9:16]
+    left_gripper_action = demo["actions"][step][7:8]
+    right_gripper_action = demo["actions"][step][16:17]
+    actions = np.concatenate((left_joint_pos_actions, left_gripper_action,
+                              right_joint_pos_actions, right_gripper_action))
+    return {
+        "table_img": demo["obs"]["table_img"][step],
+        "left_wrist_img": demo["obs"]["left_wrist_img"][step],
+        "right_wrist_img": demo["obs"]["right_wrist_img"][step],
+        "state": joint_pos,
+        "actions": actions,
+    }
 
 
 @dataclasses.dataclass(frozen=True)
-class FrankaSingleArmInputs(transforms.DataTransformFn):
+class FrankaDualArmInputs(transforms.DataTransformFn):
     # Determines which model will be used.
     model_type: _model.ModelType
 
@@ -63,22 +78,21 @@ class FrankaSingleArmInputs(transforms.DataTransformFn):
         # Possibly need to parse images to uint8 (H,W,C) since LeRobot automatically
         # stores as float32 (C,H,W), gets skipped for policy inference.
         table_image = _parse_image(data["observation/table_img"])
-        wrist_image = _parse_image(data["observation/wrist_img"])
+        left_wrist_image = _parse_image(data["observation/left_wrist_img"])
+        right_wrist_image = _parse_image(data["observation/right_wrist_img"])
 
         # Create inputs dict. Do not change the keys in the dict below.
         inputs = {
             "state": data["observation/joint_pos"],
             "image": {
                 "base_0_rgb": table_image,
-                "left_wrist_0_rgb": wrist_image,
-                # Pad any non-existent images with zero-arrays of the appropriate shape.
-                "right_wrist_0_rgb": np.zeros_like(table_image),
+                "left_wrist_0_rgb": left_wrist_image,
+                "right_wrist_0_rgb": right_wrist_image,
             },
             "image_mask": {
                 "base_0_rgb": np.True_,
                 "left_wrist_0_rgb": np.True_,
-                # We only mask padding images for pi0 model, not pi0-FAST.
-                "right_wrist_0_rgb": np.True_ if self.model_type == _model.ModelType.PI0_FAST else np.False_,
+                "right_wrist_0_rgb": np.True_,
             },
         }
 
@@ -97,7 +111,7 @@ class FrankaSingleArmInputs(transforms.DataTransformFn):
 
 
 @dataclasses.dataclass(frozen=True)
-class FrankaSingleArmOutputs(transforms.DataTransformFn):
+class FrankaDualArmOutputs(transforms.DataTransformFn):
     """
     This class is used to convert outputs from the model back the the dataset specific format. It is
     used for inference only.
@@ -105,11 +119,11 @@ class FrankaSingleArmOutputs(transforms.DataTransformFn):
 
     def __call__(self, data: dict) -> dict:
         # Only return the first 8 actions.
-        return {"actions": np.asarray(data["actions"][:, :8])}
+        return {"actions": np.asarray(data["actions"][:, :16])}
 
 
 @dataclasses.dataclass(frozen=True)
-class FrankaSingleArmDataConfig(DataConfigFactory):
+class FrankaDualArmDataConfig(DataConfigFactory):
     """
     This config is used to configure transforms that are applied at various parts of the data pipeline.
     """
@@ -128,7 +142,8 @@ class FrankaSingleArmDataConfig(DataConfigFactory):
                 _transforms.RepackTransform(
                     {
                         "observation/table_img": "table_img",
-                        "observation/wrist_img": "wrist_img",
+                        "observation/left_wrist_img": "left_wrist_img",
+                        "observation/right_wrist_img": "right_wrist_img",
                         "observation/joint_pos": "state",
                         "actions": "actions",
                         "prompt": "prompt",
@@ -141,14 +156,14 @@ class FrankaSingleArmDataConfig(DataConfigFactory):
         # Below, we define the transforms for data going into the model (``inputs``) and the transforms
         # for data coming out of the model (``outputs``) (the latter is only used during inference).
         data_transforms = _transforms.Group(
-            inputs=[FrankaSingleArmInputs(model_type=model_config.model_type)],
-            outputs=[FrankaSingleArmOutputs()],
+            inputs=[FrankaDualArmInputs(model_type=model_config.model_type)],
+            outputs=[FrankaDualArmOutputs()],
         )
 
         # Pi0 models are trained on delta actions (relative to the first state in each action chunk), except for the gripper.
         # Data loader returns absolute joint position actions -- convert to delta actions for training.
         if self.extra_delta_transform:
-            delta_action_mask = _transforms.make_bool_mask(7, -1)
+            delta_action_mask = _transforms.make_bool_mask(7, -1, 7, -1)
             data_transforms = data_transforms.push(
                 inputs=[_transforms.DeltaActions(delta_action_mask)],
                 outputs=[_transforms.AbsoluteActions(delta_action_mask)],
@@ -167,13 +182,13 @@ class FrankaSingleArmDataConfig(DataConfigFactory):
 
 
 # These train configs define the hyperparameters for fine-tuning the base model on a dataset.
-franka_single_arm_configs = [
+franka_dual_arm_configs = [
     TrainConfig(
-        name="robotgpt_franka_single_arm_pi05_lora",  # low_mem_finetune
+        name="robotgpt_franka_dual_arm_pi05_lora",  # low_mem_finetune
         model=pi0_config.Pi0Config(
             pi05=True, paligemma_variant="gemma_2b_lora", action_expert_variant="gemma_300m_lora"
         ),
-        data=FrankaSingleArmDataConfig(
+        data=FrankaDualArmDataConfig(
             repo_id=MISSING,
             base_config=DataConfig(prompt_from_task=True),
             extra_delta_transform=True,
@@ -193,11 +208,11 @@ franka_single_arm_configs = [
     ),
     # This config is just for viewing the pi05 base model's performance on a task as is - not for finetuning.
     TrainConfig(
-        name="robotgpt_franka_single_arm_pi05_base",
+        name="robotgpt_franka_dual_arm_pi05_base",
         model=pi0_config.Pi0Config(
             pi05=True,
         ),
-        data=FrankaSingleArmDataConfig(
+        data=FrankaDualArmDataConfig(
             repo_id=MISSING,
             assets=AssetsConfig(
                 assets_dir="gs://openpi-assets/checkpoints/pi05_base/assets",

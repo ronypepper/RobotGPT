@@ -16,18 +16,17 @@ License: Apache 2.0
 
 import ast
 import dataclasses
-from itertools import islice
 import pathlib
 import shutil
+from itertools import islice
 
+import configurations
 import h5py
-from lerobot.common.datasets.lerobot_dataset import HF_LEROBOT_HOME
-from lerobot.common.datasets.lerobot_dataset import LeRobotDataset
 import numpy as np
-from tqdm import tqdm
 import tyro
-
-ROBOT_TYPES = ("franka_single_arm",)
+from hdf5_dataset_interfaces import get_hdf5_dataset_interface_fcts
+from lerobot.common.datasets.lerobot_dataset import HF_LEROBOT_HOME, LeRobotDataset
+from tqdm import tqdm
 
 
 @dataclasses.dataclass
@@ -46,7 +45,7 @@ class Args:
     # Push converted dataset to hugging face hub.
     push_to_hub: bool = False
 
-    # Robot type - must be one of ROBOT_TYPES (is also entered into LeRobot dataset).
+    # Robot type - must be an option in HDF5_DATASET_INTERFACE_FCTS of hdf5_dataset_interfaces.py.
     robot_type: str | None = None
 
     # Number of episodes to write into converted dataset. 0 means all episodes.
@@ -60,7 +59,7 @@ def main(args: Args):
 
     dataset_path = (
         pathlib.Path(args.dataset).expanduser().resolve()
-    )  # h5py cannot (seemingly) expand ~ to home directory by itself
+    )  # h5py seems to cannot expand ~ to home directory by itself
     if not dataset_path.exists():
         raise ValueError(f"dataset path ({args.dataset}) does not exist.")
     args.dataset = str(dataset_path)
@@ -70,16 +69,8 @@ def main(args: Args):
     if args.output_name is None or args.output_name == "":
         args.output_name = pathlib.Path(args.dataset).stem
 
-    if args.robot_type not in ROBOT_TYPES:
-        raise ValueError(f"robot_type must be one of {ROBOT_TYPES}.")
-
-    # Assign dataset parser functions based on robot type
-    get_dimensions_fct, extract_frame_fct = None, None
-    if args.robot_type == "franka_single_arm":
-        get_dimensions_fct, extract_frame_fct = get_dimensions_franka_single_arm, extract_frame_franka_single_arm
-
-    if get_dimensions_fct is None or extract_frame_fct is None:
-        raise ValueError(f"No dataset parser functions defined for valid robot type {args.robot_type}.")
+    # Get dataset interface functions based on robot type
+    get_data_dimensions_fct, process_hdf5_frame_fct = get_hdf5_dataset_interface_fcts(args.robot_type)
 
     # Clean up any existing dataset in the output directory
     repo_name = args.hf_user + "/" + args.output_name
@@ -99,7 +90,7 @@ def main(args: Args):
         # Create LeRobot dataset, define features to store
         # OpenPi assumes that proprio is stored in `state` and actions in `action`
         # LeRobot assumes that dtype of image data is `image`
-        dimensions = get_dimensions_fct()
+        dimensions = get_data_dimensions_fct()
         lerobot_dataset = LeRobotDataset.create(
             repo_id=repo_name,
             robot_type=args.robot_type,
@@ -141,7 +132,7 @@ def main(args: Args):
 
         for demo in tqdm(hdf5_demos, total=total_episodes):
             for step in tqdm(range(demo.attrs["num_samples"]), leave=False):
-                frame = extract_frame_fct(demo, step)
+                frame = process_hdf5_frame_fct(demo, step)
                 frame["task"] = prompt
                 lerobot_dataset.add_frame(frame)
             lerobot_dataset.save_episode()
@@ -154,35 +145,6 @@ def main(args: Args):
             push_videos=True,
             license="apache-2.0",
         )
-
-
-def get_dimensions_franka_single_arm():
-    return {
-        "actions": 8,
-        "state": 8,
-        "img_width": 224,
-        "img_height": 224,
-    }
-
-
-def extract_frame_franka_single_arm(demo: h5py.Group, step: int) -> dict:
-    # Pi0 models are trained for gripper positions in [0.0, 1.0], with 0.0 corresponding to fully open and 1.0 corresponding to fully closed.
-    # Observations in the dataset are in [0.0, 0.04], with 0.0 corresponding to fully closed and 0.04 corresponding to fully open.
-    # Therefore we adjust the gripper observation to fit the Pi0 models' format. For actions, we can extract the gripper command directly in this format.
-    state_obs = demo["obs"]["joint_pos"][step]
-    joint_pos_obs = state_obs[0:7]
-    gripper_obs = (state_obs[7:8] - 0.04) / 0.04
-    state_obs = np.concatenate((joint_pos_obs, gripper_obs))
-
-    joint_pos_actions = demo["processed_actions"][step][:7]
-    gripper_action = demo["actions"][step][7:8]
-    actions = np.concatenate((joint_pos_actions, gripper_action))
-    return {
-        "table_img": demo["obs"]["table_img"][step],
-        "wrist_img": demo["obs"]["wrist_img"][step],
-        "state": state_obs,
-        "actions": actions,
-    }
 
 
 if __name__ == "__main__":

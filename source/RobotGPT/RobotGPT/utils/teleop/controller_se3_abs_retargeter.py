@@ -79,7 +79,7 @@ class ControllerSe3AbsRetargeter(RetargeterBase):
         """
         # Default pose
         ee_position = np.array([0.0, 0.0, 0.0])
-        ee_rotation = np.array([1.0, 0.0, 0.0, 0.0])
+        ee_rotation = np.array([0.0, 0.0, 0.0, 1.0])
 
         # Get controller data
         if self.bound_controller in data and data[self.bound_controller] is not None:
@@ -91,10 +91,7 @@ class ControllerSe3AbsRetargeter(RetargeterBase):
 
         # Apply frame offsets
         ee_position += self.pos_offset
-
-        # ee_rotation is w,x,y,z but scipy expects x,y,z,w
-        ee_rotation = Rotation.from_quat([*ee_rotation[1:], ee_rotation[0]])
-        ee_rotation = ee_rotation * self.rot_offset
+        ee_rotation = Rotation.from_quat(ee_rotation) * self.rot_offset
 
         # # Helper code for figuring out rotation offsets easily via controller inputs
         # # comment out "ee_rotation = ee_rotation * self.rot_offset" above when using
@@ -115,9 +112,7 @@ class ControllerSe3AbsRetargeter(RetargeterBase):
             x = 0.0  # Zero out rotation around x-axis
             ee_rotation = Rotation.from_euler("ZYX", [z, y, x]) * Rotation.from_euler("X", np.pi, degrees=False)
 
-        # Convert back to w,x,y,z format
         ee_rotation = ee_rotation.as_quat()
-        ee_rotation = np.array([ee_rotation[3], ee_rotation[0], ee_rotation[1], ee_rotation[2]])  # Output remains w,x,y,z
 
         # Update visualization if enabled
         if self._enable_visualization:
@@ -130,74 +125,6 @@ class ControllerSe3AbsRetargeter(RetargeterBase):
 
     def get_requirements(self) -> list[RetargeterBase.Requirement]:
         return [RetargeterBase.Requirement.MOTION_CONTROLLER]
-
-    # def _retarget_abs(self, thumb_tip: np.ndarray, index_tip: np.ndarray, wrist: np.ndarray) -> np.ndarray:
-    #     """Handle absolute pose retargeting.
-
-    #     Args:
-    #         thumb_tip: 7D array containing position (xyz) and orientation (quaternion)
-    #             for the thumb tip
-    #         index_tip: 7D array containing position (xyz) and orientation (quaternion)
-    #             for the index tip
-    #         wrist: 7D array containing position (xyz) and orientation (quaternion)
-    #             for the wrist
-
-    #     Returns:
-    #         np.ndarray: 7D array containing position (xyz) and orientation (quaternion)
-    #             for the robot end-effector
-    #     """
-
-    #     # Get position
-    #     if self._use_wrist_position:
-    #         position = wrist[:3]
-    #     else:
-    #         position = (thumb_tip[:3] + index_tip[:3]) / 2
-
-    #     # Get rotation
-    #     if self._use_wrist_rotation:
-    #         # wrist is w,x,y,z but scipy expects x,y,z,w
-    #         base_rot = Rotation.from_quat([*wrist[4:], wrist[3]])
-    #     else:
-    #         # Average the orientations of thumb and index using SLERP
-    #         # thumb_tip is w,x,y,z but scipy expects x,y,z,w
-    #         r0 = Rotation.from_quat([*thumb_tip[4:], thumb_tip[3]])
-    #         # index_tip is w,x,y,z but scipy expects x,y,z,w
-    #         r1 = Rotation.from_quat([*index_tip[4:], index_tip[3]])
-    #         key_times = [0, 1]
-    #         slerp = Slerp(key_times, Rotation.concatenate([r0, r1]))
-    #         base_rot = slerp([0.5])[0]
-
-    #     # Apply additional x-axis rotation to align with pinch gesture
-    #     final_rot = base_rot * Rotation.from_euler("x", 90, degrees=True)
-
-    #     if self._zero_out_xy_rotation:
-    #         z, y, x = final_rot.as_euler("ZYX")
-    #         y = 0.0  # Zero out rotation around y-axis
-    #         x = 0.0  # Zero out rotation around x-axis
-    #         final_rot = Rotation.from_euler("ZYX", [z, y, x]) * Rotation.from_euler("X", np.pi, degrees=False)
-
-    #     # Convert back to w,x,y,z format
-    #     quat = final_rot.as_quat()
-    #     rotation = np.array([quat[3], quat[0], quat[1], quat[2]])  # Output remains w,x,y,z
-
-    #     # Update visualization if enabled
-    #     if self._enable_visualization:
-    #         self._visualization_pos = position
-    #         self._visualization_rot = rotation
-    #         self._update_visualization()
-
-    #     return np.concatenate([position, rotation])
-
-    # def _update_visualization(self):
-    #     """Update visualization markers with current pose.
-
-    #     If visualization is enabled, the target end-effector pose is visualized in the scene.
-    #     """
-    #     if self._enable_visualization:
-    #         trans = np.array([self._visualization_pos])
-    #         quat = Rotation.from_matrix(self._visualization_rot).as_quat()
-    #         rot = np.array([np.array([quat[3], quat[0], quat[1], quat[2]])])
-    #         self._goal_marker.visualize(translations=trans, orientations=rot)
 
 
 @dataclass
