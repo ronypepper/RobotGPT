@@ -24,6 +24,7 @@ RobotLearning
 git clone https://github.com/ronypepper/RobotGPT.git
 source env_isaaclab/bin/activate
 cd RobotGPT && python -m pip install -e source/RobotGPT
+cd .. && cp -r RobotGPT/apps/robotgpt.python.xr.openxr.kit IsaacLab/apps/robotgpt.python.xr.openxr.kit  # Modified XR experience file fixing rendering issues
 ```
 
 4. Modify openpi install:
@@ -150,28 +151,21 @@ These are some useful commands during development. All command blocks need to be
 ```
 source env_isaaclab/bin/activate
 python RobotGPT/scripts/zero_agent.py --task RobotGPT-Place-Cube-In-Bin-Franka-Single-Arm-Pos-v0 \
---num_envs 1 --enable_cameras --viz kit --device cpu
+--num_envs 1 --enable_cameras --viz kit
 ```
 
 ### XR Teleoperation with tracked motion controllers
-**Terminal 1: Start CloudXR**
 ```
 source env_isaaclab/bin/activate
-python -m isaacteleop.cloudxr --accept-eula --cloudxr-env-config=RobotGPT/dev/quest3_cloudxr.env # Last argument enables optical hand tracking
-```
-**Terminal 2: Start task simulation with teleop**
-```
-source env_isaaclab/bin/activate
-source ~/.cloudxr/run/cloudxr.env
 python RobotGPT/scripts/teleop_se3_agent.py --task RobotGPT-Place-Cube-In-Bin-Franka-Single-Arm-IK-Abs-v0 \
---enable_cameras --device cpu --teleop_device motioncontroller --xr
+--enable_cameras --xr --experience robotgpt.python.xr.openxr.kit
 ```
 
 ### Replay recorded demonstrations in simulation
 ```
 source env_isaaclab/bin/activate
 python RobotGPT/scripts/replay_demos.py --task RobotGPT-Place-Cube-In-Bin-Franka-Single-Arm-IK-Abs-v0 \
---enable_cameras --viz kit --device cpu --dataset_file robotgpt_output/datasets/hdf5/dataset.hdf5
+--enable_cameras --viz kit --dataset_file robotgpt_output/datasets/hdf5/dataset.hdf5
 ```
 
 ### Merge multiple hdf5 datasets
@@ -182,7 +176,7 @@ python IsaacLab/scripts/tools/merge_hdf5_datasets.py \
 --output_file robotgpt_output/datasets/hdf5/dataset.hdf5
 ```
 
-### Create mp4 videos from a hdf5 dataset 
+### Create mp4 videos from a hdf5 dataset
 ```
 source env_isaaclab/bin/activate
 mkdir -p robotgpt_output/datasets/videos
@@ -203,7 +197,7 @@ XLA_PYTHON_CLIENT_MEM_FRACTION=0.5 python openpi/scripts/serve_policy.py policy:
 ```
 source env_isaaclab/bin/activate
 python RobotGPT/scripts/openpi_agent.py --task RobotGPT-Place-Cube-In-Bin-Franka-Single-Arm-Pos-v0 \
---viz kit --device cpu --record_scene --record_table --record_wrists \
+--viz kit --record_scene --record_table --record_wrists \
 --output_dir=robotgpt_output/evaluation/robotgpt_franka_single_arm_pi05_base
 ```
 

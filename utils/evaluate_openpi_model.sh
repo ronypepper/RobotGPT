@@ -190,8 +190,8 @@ cd ../../robotgpt_output
 ) &
 BG_PIDS+=("$!")
 
-# Reolve if table cam videos or annotations should be created
-OUTPUT_FLAG="--record_table"
+# Resolve if scene videos or annotations should be created
+OUTPUT_FLAG="--record_scene"
 if [[ "$AUTO_ANNOTATE" -eq 1 ]]; then
     OUTPUT_FLAG="--annotate"
 fi
@@ -200,7 +200,7 @@ fi
 echo "Starting simulation..."
 source ../env_isaaclab/bin/activate
 python ../RobotGPT/scripts/openpi_agent.py --task "$TASK" \
---device cpu $OUTPUT_FLAG \
+--viz kit $OUTPUT_FLAG \
 --output_dir="evaluation/${TRAIN_CONFIG}/${DATASET}/${CHECKPOINT}" \
 --num_rollouts "$NUM_ROLLOUTS" --max_duration "$MAX_DURATION" "${KIT_ARGS[@]}"
 echo "Simulation stopped."

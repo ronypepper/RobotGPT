@@ -112,6 +112,11 @@ class EnvStepDifferentialInverseKinematicsAction(ActionTerm):
             self._offset_rot = torch.tensor(self.cfg.body_offset.rot, device=self.device).repeat(self.num_envs, 1)
         else:
             self._offset_pos, self._offset_rot = None, None
+        if self.cfg.world_offset is not None:
+            self._world_offset_pos = torch.tensor(self.cfg.world_offset.pos, device=self.device).repeat(self.num_envs, 1)
+            self._world_offset_rot = torch.tensor(self.cfg.world_offset.rot, device=self.device).repeat(self.num_envs, 1)
+        else:
+            self._world_offset_pos, self._world_offset_rot = None, None
 
         # parse clip
         if self.cfg.clip is not None:
@@ -189,6 +194,12 @@ class EnvStepDifferentialInverseKinematicsAction(ActionTerm):
     """
 
     def process_actions(self, actions: torch.Tensor):
+        # Apply world offset
+        if self.cfg.world_offset is not None:
+            actions[:, :3], actions[:, 3:] = math_utils.combine_frame_transforms(
+                self._world_offset_pos, self._world_offset_rot, actions[:, :3], actions[:, 3:]
+            )
+
         # store the raw actions
         self._raw_actions[:] = actions
         self._scaled_clipped_actions[:] = self.raw_actions * self._scale
@@ -302,3 +313,6 @@ class EnvStepDifferentialInverseKinematicsActionCfg(ActionTermCfg):
     """Scale factor for the action. Defaults to 1.0."""
     controller: DifferentialIKControllerCfg = MISSING
     """The configuration for the differential IK controller."""
+
+    world_offset: OffsetCfg | None = None
+    """Additional world offset directly applied to the raw actions"""

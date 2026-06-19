@@ -76,29 +76,6 @@ else
     OUT_STREAM="/dev/null"
 fi
 
-# Setup spawned process cleanup
-BG_PIDS=()
-cleanup() {
-    if ((${#BG_PIDS[@]})); then
-        echo "Killing ${#BG_PIDS[@]} background process(es)..."
-
-        for pid in "${BG_PIDS[@]}"; do
-            kill "$pid" 2>/dev/null || true
-        done
-
-        echo "Waiting for ${#BG_PIDS[@]} background process(es) to stop..."
-
-        for pid in "${BG_PIDS[@]}"; do
-            wait "$pid" 2>/dev/null || true
-        done
-
-        echo "All background processes stopped."
-    else
-        echo "No background processes have been started."
-    fi
-}
-trap cleanup EXIT
-
 # Change cwd to shell script directory regardless of where script was called from
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR"
@@ -127,19 +104,10 @@ if [ -e "$DATASET_PATH" ]; then
     esac
 fi
 
-# Start CloudXR server
-(
-    echo "Starting CloudXR server..."
-    source env_isaaclab/bin/activate
-    python -m isaacteleop.cloudxr --accept-eula --cloudxr-env-config=RobotGPT/dev/quest3_cloudxr.env &> "$OUT_STREAM" # Last argument enables optical hand tracking
-) &
-BG_PIDS+=("$!")
-
 # Start task simulation with teleop and recording
 echo "Starting simulation and task collection..."
 source env_isaaclab/bin/activate
-source ~/.cloudxr/run/cloudxr.env
 python RobotGPT/scripts/record_demos.py --task "$TASK" \
---enable_cameras --device cpu --teleop_device motioncontroller --xr \
+--enable_cameras --xr --experience robotgpt.python.xr.openxr.kit \
 --dataset_file "$DATASET_PATH" --num_demos "$NUM_DEMOS" &> "$OUT_STREAM"
 echo "Task collection completed."

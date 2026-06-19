@@ -2,18 +2,12 @@
 The four command blocks below are the basis of the four shell scripts in this directory.
 
 ## XR demonstration collection with tracked motion controllers
-**Terminal 1: Start CloudXR**
-```
-source env_isaaclab/bin/activate
-python -m isaacteleop.cloudxr --accept-eula --cloudxr-env-config=RobotGPT/dev/quest3_cloudxr.env # Last argument enables optical hand tracking
-```
 **Terminal 2: Start task simulation with teleop and recording**
 ```
 source env_isaaclab/bin/activate
-source ~/.cloudxr/run/cloudxr.env
 mkdir -p robotgpt_output/datasets/hdf5
 python RobotGPT/scripts/record_demos.py --task RobotGPT-Place-Cube-In-Bin-Franka-Single-Arm-IK-Abs-v0 \
---enable_cameras --device cpu --teleop_device motioncontroller --xr \
+--enable_cameras --xr --experience robotgpt.python.xr.openxr.kit \
 --dataset_file robotgpt_output/datasets/hdf5/DATASET_NAME.hdf5 --num_demos 25
 ```
 
@@ -58,6 +52,6 @@ XLA_PYTHON_CLIENT_MEM_FRACTION=0.5 python -m robotgpt.serve_policy \
 cd robotgpt_output
 source ../env_isaaclab/bin/activate
 python ../RobotGPT/scripts/openpi_agent.py --task RobotGPT-Place-Cube-In-Bin-Franka-Single-Arm-Pos-v0 \
---viz kit --device cpu --record_scene --record_table --record_wrists \
+--viz kit --record_scene --record_table --record_wrists \
 --output_dir=robotgpt_output/evaluation/TRAIN_CONFIG/DATASET_NAME/4999
 ```
