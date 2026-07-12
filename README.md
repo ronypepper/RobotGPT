@@ -12,8 +12,9 @@ RobotLearning
 ├── env_isaacteleop
 ├── env_robotgpt_evals
 ```
+
 ### Installation Steps
-1. Install Isaac Lab 3 (develop branch) locally (using Isaac Sim pip package and Isaac Lab from GitHub): [Isaac Lab Documentation](https://isaac-sim.github.io/IsaacLab/develop/source/setup/installation/pip_installation.html).
+1. Install Isaac Lab 3 locally using Isaac Sim pip package and Isaac Lab from GitHub (develop branch, commit cf615d32e3): [Isaac Lab Documentation](https://isaac-sim.github.io/IsaacLab/develop/source/setup/installation/pip_installation.html).
 > If you encounter connection issues with XR teleoperation later, you may need to configure your firewall. Refer to Isaac Teleop's Quick Start guide: [Isaac Teleop Quick Start](https://nvidia.github.io/IsaacTeleop/main/getting_started/quick_start.html).
 
 2. Install openpi locally from GitHub: [openpi GitHub](https://github.com/Physical-Intelligence/openpi).
@@ -40,7 +41,14 @@ cd openpi/packages/openpi-client
 uv pip install -e .
 ```
 
-6. Setup evaluation environment (only required for annotation and graph generation):
+6. Download MJCF models of Google's Scanned Objects Dataset (only required for pack items task environments):
+```
+mkdir -p robotgpt_assets/google_scanned_objects
+cd robotgpt_assets/google_scanned_objects
+git clone https://github.com/kevinzakka/mujoco_scanned_objects.git
+```
+
+7. Setup evaluation environment (only required for annotation and graph generation):
 ```
 uv venv --python 3.12 --seed env_robotgpt_evals
 source env_robotgpt_evals/bin/activate
@@ -51,7 +59,7 @@ uv pip install -r RobotGPT/evals/requirements.txt
 
 # Directory Structure
 
-The diagram below gives an overview of the output directory structure.
+The diagram below gives an overview of the project's directory structure.
 ```
 RobotLearning
 ├── RobotGPT                            ... This repository
@@ -59,7 +67,10 @@ RobotLearning
 ├── openpi                              ... The openpi repository
 │   └── .venv                           ... openpi's python environment
 ├── env_isaaclab                        ... Isaac Lab's python environment
-├── env_isaacteleop                     ... Isaac Teleop's python environment
+├── env_robotgpt_evals                  ... Python environment used by some evaluation scripts
+└── robotgpt_assets                     ... Simulation assets
+    └── google_scanned_objects
+        └── mujoco_scanned_objects
 └── robotgpt_output                     ... Output files
     ├── datasets
     │   ├── hdf5                        ... Task datasets in hdf5 format created by XR demonstration collection in Isaac Lab
@@ -108,7 +119,7 @@ For every step, there is a shell script available in the "utils/" directory that
 
 For details about the required arguments, execute `XXXXXXX.sh --help`.
 
-> Remember to make the scripts executable by running:\
+> You may need to make the scripts executable by running:\
 > `chmod +x record_xr_demos.sh convert_hdf5_to_lerobot.sh train_openpi_model.sh evaluate_openpi_model.sh`\
 > inside "RobotGPT/utils/".
 
@@ -118,7 +129,8 @@ For details about the required arguments, execute `XXXXXXX.sh --help`.
 The following steps need to be done to add a new robot embodiment:
 1. Define a new robot setup file in "RobotGPT/source/RobotGPT/RobotGPT/utils/robots/", which implements:
     - The *setup_<ROBOT_NAME>_joint_pos_env* function, which sets up the robot in an Isaac Lab environment (a *RobotGPTEnvCfg*) for joint position control.
-    - The *setup_<ROBOT_NAME>_ik_abs_env* function, which sets up the robot in an Isaac Lab environment (a *RobotGPTEnvCfg*) absolute IK control via XR teleoperation.
+    - The *_build_<ROBOT_NAME>_teleop_pipeline* function, which builds an Isaac Teleop teleoperation pipeline for absolute SE3 control of the end-effectors.
+    - The *setup_<ROBOT_NAME>_ik_abs_env* function, which sets up the robot in an Isaac Lab environment (a *RobotGPTEnvCfg*) for absolute IK control via XR teleoperation using the *_build_<ROBOT_NAME>_teleop_pipeline* function.
     - The *process_observation_for_policy_<ROBOT_NAME>* function. which converts Isaac Lab observations to the format expected by the corresponding openpi integration (see step 4).
     - The *process_policy_action_<ROBOT_NAME>* function, which converts actions by the corresponding openpi integration to the format expected by Isaac Lab (see step 4).
 2. Create a new directory containing environment configurations for the desired tasks at "RobotGPT/source/RobotGPT/RobotGPT/tasks/manager_based/<TASK_NAME>/config/". The new environment configurations use the first two functions from step 1 to setup the new robot. The "\_\_init\_\_.py" file in this folder needs to register the new environments with Isaac Lab.
@@ -203,8 +215,17 @@ python RobotGPT/scripts/openpi_agent.py --task RobotGPT-Place-Cube-In-Bin-Franka
 
 
 # License
+Different licenses apply to different directories/files of the RobotGPT repository.
 
-The RobotGPT repository, except for the "openpi/" directory, is an Isaac Lab project generated by the Isaac Lab template generator.
-Additionally, some files in the "script/" and "source/" directories are based on files from the [Isaac Lab GitHub repository](https://github.com/isaac-sim/IsaacLab).
-The RobotGPT repository is therefore licensed under the [BSD-3 License](LICENSE), like the Isaac Lab GitHub repository, except for the "openpi/" directory, which contains code to be used and partly based on scripts of the [openpi GitHub repository](https://github.com/Physical-Intelligence/openpi). The "openpi/" directory 
-is therefore licensed under [Apache 2.0](LICENSE-openpi), like the openpi GitHub repository.
+Parts of "script/" and "source/" directories were created by the Isaac Lab template generator and modified or are based on other files from the [Isaac Lab GitHub repository](https://github.com/isaac-sim/IsaacLab). These directories are licensed under the [BSD-3 License](licenses/LICENSE-isaaclab), like the Isaac Lab GitHub repository.
+
+The "openpi/" directory contains code to be used and partly based on scripts of the [openpi GitHub repository](https://github.com/Physical-Intelligence/openpi). The "openpi/" directory 
+is licensed under [Apache 2.0](licenses/LICENSE-openpi), like the openpi GitHub repository.
+
+If a directory contains a license, this license applies to all its files and sub-directories and takes precedence over the above stated.
+
+If a file notes a specific license in its header, this license takes precedence over the above stated.
+
+Any file not covered by a license as stated above, is licensed under [Apache 2.0](licenses/LICENSE-apache-2.0.txt).
+
+License files can be found in the "licenses/" directory.

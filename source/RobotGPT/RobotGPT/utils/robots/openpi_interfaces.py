@@ -14,6 +14,10 @@ from RobotGPT.utils.robots.franka_single_arm import (
     process_observation_for_openpi_franka_single_arm,
     process_openpi_action_franka_single_arm,
 )
+from RobotGPT.utils.robots.tiago_pro import (
+    process_observation_for_openpi_tiago_pro,
+    process_openpi_action_tiago_pro,
+)
 
 # Openpi observation/action interface functions for implemented robot types
 OPENPI_INTERFACE_FCTS = {
@@ -21,6 +25,8 @@ OPENPI_INTERFACE_FCTS = {
                            "act" : process_openpi_action_franka_single_arm},
     "franka_dual_arm" : {"obs" : process_observation_for_openpi_franka_dual_arm,
                          "act" : process_openpi_action_franka_dual_arm},
+    "tiago_pro" : {"obs" : process_observation_for_openpi_tiago_pro,
+                         "act" : process_openpi_action_tiago_pro},
 }
 
 def get_openpi_interface_fcts(robot_type: str):

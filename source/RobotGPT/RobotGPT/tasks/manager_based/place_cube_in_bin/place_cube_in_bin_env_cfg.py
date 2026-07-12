@@ -135,3 +135,9 @@ class PlaceCubeInBinEnvCfg(RobotGPTEnvCfg):
 
     # Prompt for the openpi policy.
     prompt: str = "Pick up the blue cube and drop it in the bin"
+
+    def __post_init__(self):
+        """Post initialization."""
+        super().__post_init__()
+        # general settings
+        self.episode_length_s = 60.0

@@ -96,7 +96,7 @@ def main(args: Args):
         eval["avg_durations"] = avg_durations
 
     # Generate success percentage graph
-    plt.figure(figsize=(4, 2.5))
+    plt.figure("Success rates",figsize=(4, 2.5))
     x_ticks = set()
     for eval in evaluations:
         plt.plot(eval["checkpoints"], eval["success_percentages"], label=str(eval["num_demos"]) + " demos")
@@ -109,7 +109,7 @@ def main(args: Args):
     plt.show()
 
     # Generate average duration graph
-    plt.figure(figsize=(4, 2.5))
+    plt.figure("Average durations", figsize=(4, 2.5))
     x_ticks = set()
     for eval in evaluations:
         plt.plot(eval["checkpoints"], eval["avg_durations"], label=str(eval["num_demos"]) + " demos")
@@ -118,7 +118,7 @@ def main(args: Args):
     plt.xlabel(f"Training steps @ batch_size = {args.batch_size}")
     plt.ylabel("Average duration [sec]")
     plt.grid(True)
-    plt.legend(loc="lower center", frameon=True)
+    plt.legend(loc="upper right", frameon=True)
     plt.show()
 
 

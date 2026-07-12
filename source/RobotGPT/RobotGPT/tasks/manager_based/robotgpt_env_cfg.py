@@ -210,7 +210,7 @@ class RobotGPTObservationsCfg:
         """Observations for policy group."""
 
         left_joint_pos = ObsTerm(func=mdp.joint_pos, params={"asset_cfg": SceneEntityCfg("robot")})
-        right_joint_pos = ObsTerm(func=mdp.joint_pos, params={"asset_cfg": SceneEntityCfg("robot_2")})
+        right_joint_pos = ObsTerm(func=mdp.joint_pos, params={"asset_cfg": SceneEntityCfg("robot")})
         left_wrist_img = ObsTerm(
             func=image_converted_for_openpi, params={"sensor_cfg": SceneEntityCfg("left_wrist_cam"),
                                                      "data_type": "rgb", "normalize": False}
@@ -224,8 +224,22 @@ class RobotGPTObservationsCfg:
             self.enable_corruption = False
             self.concatenate_terms = False
 
+    # Helper functions for setting up the observations in a task's environment cfg
+    def setup_single_arm_observations(self, joint_names: str | list[str] | None = None):
+        self.policy = self.SingleArmPolicyCfg()
+        self.policy.joint_pos.params = {"asset_cfg": SceneEntityCfg("robot", joint_names=joint_names)}
+
+    def setup_dual_arm_observations(self, left_joint_names: str | list[str] | None = None,
+                                    right_joint_names: str | list[str] | None = None,
+                                    use_robot_2_for_right_arm: bool = False):
+        self.policy = self.DualArmPolicyCfg()
+        self.policy.left_joint_pos.params = {"asset_cfg": SceneEntityCfg("robot", joint_names=left_joint_names)}
+        self.policy.right_joint_pos.params = {
+            "asset_cfg": SceneEntityCfg("robot_2" if use_robot_2_for_right_arm else "robot", joint_names=right_joint_names)
+        }
+
     # observation groups
-    policy: SingleArmPolicyCfg | DualArmPolicyCfg = SingleArmPolicyCfg()
+    policy: SingleArmPolicyCfg | DualArmPolicyCfg = MISSING
 
 
 @configclass

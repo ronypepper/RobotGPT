@@ -113,6 +113,8 @@ class EnvStepDifferentialInverseKinematicsAction(ActionTerm):
         else:
             self._offset_pos, self._offset_rot = None, None
         if self.cfg.world_offset is not None:
+            if self.cfg.auto_world_offset:
+                raise ValueError("world_offset must not be set if auto_world_offset is True")
             self._world_offset_pos = torch.tensor(self.cfg.world_offset.pos, device=self.device).repeat(self.num_envs, 1)
             self._world_offset_rot = torch.tensor(self.cfg.world_offset.rot, device=self.device).repeat(self.num_envs, 1)
         else:
@@ -194,6 +196,16 @@ class EnvStepDifferentialInverseKinematicsAction(ActionTerm):
     """
 
     def process_actions(self, actions: torch.Tensor):
+        # Auto set world offset on first call
+        if self.cfg.auto_world_offset and self._world_offset_pos is None:
+            # obtain quantities from simulation
+            ee_pos_w = self._asset.data.body_pos_w.torch[:, self._body_idx]
+            ee_quat_w = self._asset.data.body_quat_w.torch[:, self._body_idx]
+
+            self._world_offset_pos, self._world_offset_rot = math_utils.subtract_frame_transforms(
+                actions[:, :3], actions[:, 3:], ee_pos_w, ee_quat_w
+            )
+
         # Apply world offset
         if self.cfg.world_offset is not None:
             actions[:, :3], actions[:, 3:] = math_utils.combine_frame_transforms(
@@ -316,3 +328,6 @@ class EnvStepDifferentialInverseKinematicsActionCfg(ActionTermCfg):
 
     world_offset: OffsetCfg | None = None
     """Additional world offset directly applied to the raw actions"""
+    auto_world_offset: bool = False
+    """Sets the world offset to match the first pose received with the gripper, ie all input poses are transformed to be
+      relative to the first input pose."""

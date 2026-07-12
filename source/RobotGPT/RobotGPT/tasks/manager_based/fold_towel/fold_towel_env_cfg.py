@@ -117,3 +117,9 @@ class FoldTowelEnvCfg(RobotGPTEnvCfg):
 
     # Prompt for the openpi policy.
     prompt: str = "Fold the towel two times"
+
+    def __post_init__(self):
+        """Post initialization."""
+        super().__post_init__()
+        # general settings
+        self.episode_length_s = 120.0

@@ -197,6 +197,29 @@ franka_single_arm_configs = [
         batch_size=4,
         num_workers=4
     ),
+    TrainConfig(
+        name="h100_robotgpt_franka_single_arm_pi05_lora",  # low_mem_finetune on H100 GPU
+        model=pi0_config.Pi0Config(
+            pi05=True, paligemma_variant="gemma_2b_lora", action_expert_variant="gemma_300m_lora"
+        ),
+        data=FrankaSingleArmDataConfig(
+            repo_id=MISSING,
+            base_config=DataConfig(prompt_from_task=True),
+            extra_delta_transform=True,
+        ),
+        weight_loader=weight_loaders.CheckpointWeightLoader("gs://openpi-assets/checkpoints/pi05_base/params"),
+        num_train_steps=5_000,
+        save_interval=500,
+        keep_period=500,
+        # The freeze filter defines which parameters should be frozen during training.
+        freeze_filter=pi0_config.Pi0Config(
+            pi05=True, paligemma_variant="gemma_2b_lora", action_expert_variant="gemma_300m_lora"
+        ).get_freeze_filter(),
+        # Turn off EMA for LoRA finetuning.
+        ema_decay=None,
+        batch_size=16,
+        num_workers=8
+    ),
     # This config is just for viewing the pi05 base model's performance on a task as is - not for finetuning.
     TrainConfig(
         name="robotgpt_franka_single_arm_pi05_base",

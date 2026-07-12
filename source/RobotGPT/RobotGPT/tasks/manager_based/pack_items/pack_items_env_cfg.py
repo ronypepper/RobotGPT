@@ -32,7 +32,7 @@ from RobotGPT.utils.asset_root_path import ROBOTGPT_ASSETS_PATH
 from RobotGPT.utils.mdp.object_in_container import object_in_container
 from RobotGPT.utils.mdp.reset_multiple_objects_randomly import reset_multiple_objects_randomly
 
-GOOGLE_SCANNED_OBJECTS_RIGID_ITEMS = [
+GOOGLE_SCANNED_OBJECTS_ITEMS = [
     "Nescafe_Momento_Mocha_Specialty_Coffee_Mix_8_ct",
     "NESCAFE_NESCAFE_TC_STKS_DECAF_6_CT",
     "Threshold_Porcelain_Coffee_Mug_All_Over_Bead_White",
@@ -41,7 +41,6 @@ GOOGLE_SCANNED_OBJECTS_RIGID_ITEMS = [
     "Nestle_Candy_19_oz_Butterfinger_Singles_116567",
     "Polar_Herring_Fillets_Smoked_Peppered_705_oz_total",
     "YumYum_D3_Liquid",
-    "Utana_5_Porcelain_Ramekin_Large",
     "Cole_Hardware_Mug_Classic_Blue",
     "Shurtape_30_Day_Removal_UV_Delct_15",
     "Shurtape_Gaffers_Tape_Silver_2_x_60_yd",
@@ -49,13 +48,27 @@ GOOGLE_SCANNED_OBJECTS_RIGID_ITEMS = [
     "HeavyDuty_Flashlight",
     "Weston_No_22_Cajun_Jerky_Tonic_12_fl_oz_nLj64ZnGwDh",
     "Wilton_Pearlized_Sugar_Sprinkles_525_oz_Gold",
-    "Sapota_Threshold_4_Ceramic_Round_Planter_Red",
-    "Dino_3",
-    "Dino_4",
-    "Dino_5",
 ]
 
-ITEM_DEFAULT_POSITIONS = [
+ITEMS_SCALES = [
+    (0.6, 0.8, 0.9),
+    (0.7, 1.0, 1.0),
+    (1.0, 1.0, 1.0),
+    (1.0, 1.0, 1.0),
+    (1.0, 0.65, 1.0),
+    (1.0, 1.0, 1.0),
+    (1.0, 1.0, 0.7),
+    (1.0, 1.0, 1.0),
+    (0.8, 0.8, 0.8),
+    (1.0, 1.0, 1.0),
+    (0.9, 0.9, 0.9),
+    (0.6, 1.0, 1.0),
+    (0.9, 0.9, 0.8),
+    (0.9, 0.9, 0.9),
+    (1.0, 1.0, 1.0),
+]
+
+ITEMS_DEFAULT_POSITIONS = [
     (x, y, 0.05) for y in np.linspace(-0.5, 0.5, 5) for x in np.linspace(0.25, 0.75, 4)
 ]
 
@@ -78,8 +91,7 @@ class PackItemsSceneCfg(RobotGPTBaseSceneCfg):
                 spawn=MjcfFileCfg(
                     asset_path=f"{ROBOTGPT_ASSETS_PATH}/google_scanned_objects/mujoco_scanned_objects/models/{item_name}/model.xml",
                     usd_dir=f"{ROBOTGPT_ASSETS_PATH}/google_scanned_objects/usd_conversions/{item_name}",
-                    usd_file_name=f"{item_name}.usd",
-                    # scale=(1.5, 1.5, 1.5),
+                    scale=scale,
                     rigid_props=RigidBodyPropertiesCfg(
                         solver_position_iteration_count=16,
                         solver_velocity_iteration_count=1,
@@ -89,7 +101,7 @@ class PackItemsSceneCfg(RobotGPTBaseSceneCfg):
                         disable_gravity=False,
                     ),
                 ),
-            ) for item_name, init_pos in zip(GOOGLE_SCANNED_OBJECTS_RIGID_ITEMS, ITEM_DEFAULT_POSITIONS)
+            ) for item_name, init_pos, scale in zip(GOOGLE_SCANNED_OBJECTS_ITEMS, ITEMS_DEFAULT_POSITIONS, ITEMS_SCALES)
         }
     )
 
@@ -98,7 +110,7 @@ class PackItemsSceneCfg(RobotGPTBaseSceneCfg):
         init_state=RigidObjectCfg.InitialStateCfg(pos=(0.45, -0.35, 0.1), rot=(0, 0, 0.7071068, 0.7071068)),
         spawn=UsdFileCfg(
             usd_path=f"{ISAAC_NUCLEUS_DIR}/Props/KLT_Bin/small_KLT.usd",
-            scale=(1.0, 1.0, 1.0),
+            scale=(1.2, 1.2, 1.2),
             rigid_props=RigidBodyPropertiesCfg(
                 solver_position_iteration_count=16,
                 solver_velocity_iteration_count=1,
@@ -185,4 +197,4 @@ class PackItemsEnvCfg(RobotGPTEnvCfg):
         """Post initialization."""
         super().__post_init__()
         # general settings
-        self.episode_length_s = 2.0
+        self.episode_length_s = 120.0

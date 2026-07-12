@@ -76,3 +76,6 @@ tests/
 
 # Scratchpad text file
 scratchpad.txt
+
+# Development folder
+dev/
