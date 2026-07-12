@@ -3,6 +3,7 @@ set -euo pipefail  # Stricter error handling
 
 # Parse named flags
 TASK=""
+ROBOT_TYPE=""
 TRAIN_CONFIG=""
 HF_USER=""
 DATASET=""
@@ -17,6 +18,11 @@ while [[ $# -gt 0 ]]; do
         --task)
             [[ $# -ge 2 ]] || { echo "Missing value for --task"; exit 1; }
             TASK="$2"
+            shift 2
+            ;;
+        --robot_type)
+            [[ $# -ge 2 ]] || { echo "Missing value for --robot_type"; exit 1; }
+            ROBOT_TYPE="$2"
             shift 2
             ;;
         --config)
@@ -60,10 +66,11 @@ while [[ $# -gt 0 ]]; do
         --help|-h)
             cat << EOF
 Usage:
-  $0 --task <TASK> --dataset <NAME> --num_demos <N>
+  $0 --task <TASK> --robot_type <ROBOT_TYPE> --dataset <NAME> --num_demos <N>
 
 Required arguments:
   --task            Isaac Lab task name (remember to use the 'Pos' variant)
+  --robot_type      Name of the robot used in the task. Must have openpi interfaces defined.
   --config          Name of the openpi TrainConfig used for training the policy
   --hf_user         Hugging Face username of the dataset used for training in robotgpt_output/datasets/lerobot/
   --dataset         Name of the dataset used for training in robotgpt_output/datasets/lerobot/{hf_user}/
@@ -78,6 +85,7 @@ Optional:
 
 Example:
   $0 --task RobotGPT-Place-Cube-In-Bin-Franka-Single-Arm-Pos-v0 \
+--robot_type franka_single_arm \
 --config robotgpt_franka_single_arm_pi05_lora \
 --hf_user YOUR_HF_USERNAME --dataset dataset_1 --checkpoint 5000
 EOF
@@ -94,6 +102,10 @@ done
 # Check if all required named flags were specified
 if [[ -z "$TASK" ]]; then
     echo "--task is required"
+    exit 1
+fi
+if [[ -z "$ROBOT_TYPE" ]]; then
+    echo "--robot_type is required"
     exit 1
 fi
 if [[ -z "$TRAIN_CONFIG" ]]; then
@@ -200,7 +212,9 @@ fi
 echo "Starting simulation..."
 source ../env_isaaclab/bin/activate
 python ../RobotGPT/scripts/openpi_agent.py --task "$TASK" \
---viz kit $OUTPUT_FLAG \
---output_dir="evaluation/${TRAIN_CONFIG}/${DATASET}/${CHECKPOINT}" \
+--enable_cameras \
+$OUTPUT_FLAG \
+--robot_type "$ROBOT_TYPE" \
+--output_dir "evaluation/${TRAIN_CONFIG}/${DATASET}/${CHECKPOINT}" \
 --num_rollouts "$NUM_ROLLOUTS" --max_duration "$MAX_DURATION" "${KIT_ARGS[@]}"
 echo "Simulation stopped."
