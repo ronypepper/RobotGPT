@@ -6,7 +6,10 @@
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR"
 
-# Perform update
+# Update RobotGPT
 cd ..
 git pull
+
+# Copy files to openpi repository
+cd ..
 cp -r RobotGPT/openpi/robotgpt openpi/src
