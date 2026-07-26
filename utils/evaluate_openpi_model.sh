@@ -8,9 +8,12 @@ TRAIN_CONFIG=""
 HF_USER=""
 DATASET=""
 CHECKPOINT=""
+REMOTE_HOST="localhost"
 NUM_ROLLOUTS=10
 MAX_DURATION=0
-AUTO_ANNOTATE=0
+ANNOTATE=0
+RECORD_TABLE=0
+RECORD_WRISTS=0
 VERBOSE=0
 
 while [[ $# -gt 0 ]]; do
@@ -45,6 +48,11 @@ while [[ $# -gt 0 ]]; do
             CHECKPOINT="$2"
             shift 2
             ;;
+        --remote_host)
+            [[ $# -ge 2 ]] || { echo "Missing value for --remote_host"; exit 1; }
+            REMOTE_HOST="$2"
+            shift 2
+            ;;
         --num_rollouts)
             [[ $# -ge 2 ]] || { echo "Missing value for --num_rollouts"; exit 1; }
             NUM_ROLLOUTS="$2"
@@ -55,8 +63,16 @@ while [[ $# -gt 0 ]]; do
             MAX_DURATION="$2"
             shift 2
             ;;
-        --auto_annotate)
-            AUTO_ANNOTATE=1
+        --annotate)
+            ANNOTATE=1
+            shift 1
+            ;;
+        --record_table)
+            RECORD_TABLE=1
+            shift 1
+            ;;
+        --record_wrists)
+            RECORD_WRISTS=1
             shift 1
             ;;
         --verbose)
@@ -65,9 +81,6 @@ while [[ $# -gt 0 ]]; do
             ;;
         --help|-h)
             cat << EOF
-Usage:
-  $0 --task <TASK> --robot_type <ROBOT_TYPE> --dataset <NAME> --num_demos <N>
-
 Required arguments:
   --task            Isaac Lab task name (remember to use the 'Pos' variant)
   --robot_type      Name of the robot used in the task. Must have openpi interfaces defined.
@@ -77,9 +90,12 @@ Required arguments:
   --checkpoint      Checkpoint of the policy to load from robotgpt_output/checkpoints/{config}/{dataset}/
 
 Optional:
+  --remote_host     IP address of server hosting policy. Policy will be locally served if not specified.
   --num_rollouts    Number of rollouts to evaluate (default is 10)
   --max_duration    Overrides maximum episode length in seconds if specified
-  --auto_annotate   Do not save table cam videos and directly generate annotation.yaml for evaluation results. Requires an environment that defines success termination terms
+  --annotate        Create an annotations.yaml file with success/fail and episode length information. Requires an environment that defines success termination terms.
+  --record_table    Record videos of the table camera observations.
+  --record_wrists   Record videos of the wrist camera observations.
   --verbose         Print logs and error messages
   -h, --help        Show this help message
 
@@ -190,22 +206,32 @@ cd "$SCRIPT_DIR"
 # Change to robotgpt_output to load assets and checkpoints from there
 cd ../../robotgpt_output
 
-# Start openpi policy server
-(
-    echo "Starting openpi policy server..."
-    source ../openpi/.venv/bin/activate
-    export XLA_PYTHON_CLIENT_MEM_FRACTION=0.5
-    exec python -m robotgpt.serve_policy &> "$OUT_STREAM" \
-    --config "$TRAIN_CONFIG" \
-    --checkpoint_dir "checkpoints/${TRAIN_CONFIG}/${DATASET}/${CHECKPOINT}" \
-    --repo_id "${HF_USER}/${DATASET}"
-) &
-BG_PIDS+=("$!")
+# Start openpi policy server if not remotely served
+HOST_FLAG=""
+if [[ "$REMOTE_HOST" != "localhost" ]]; then
+    HOST_FLAG="--remote_host ${REMOTE_HOST}"
+    (
+        echo "Starting openpi policy server..."
+        source ../openpi/.venv/bin/activate
+        export XLA_PYTHON_CLIENT_MEM_FRACTION=0.5
+        exec python -m robotgpt.serve_policy &> "$OUT_STREAM" \
+        --config "$TRAIN_CONFIG" \
+        --checkpoint_dir "checkpoints/${TRAIN_CONFIG}/${DATASET}/${CHECKPOINT}" \
+        --repo_id "${HF_USER}/${DATASET}"
+    ) &
+    BG_PIDS+=("$!")
+fi
 
-# Resolve if scene videos or annotations should be created
-OUTPUT_FLAG="--record_scene"
-if [[ "$AUTO_ANNOTATE" -eq 1 ]]; then
-    OUTPUT_FLAG="--annotate"
+# Resolve if videos and/or annotations should be created
+OUTPUT_FLAGS=""
+if [[ "$ANNOTATE" -eq 1 ]]; then
+    OUTPUT_FLAGS+=" --annotate"
+fi
+if [[ "$RECORD_TABLE" -eq 1 ]]; then
+    OUTPUT_FLAGS+=" --record_table"
+fi
+if [[ "$RECORD_WRISTS" -eq 1 ]]; then
+    OUTPUT_FLAGS+=" --record_wrists"
 fi
 
 # Start task simulation with openpi client
@@ -213,7 +239,8 @@ echo "Starting simulation..."
 source ../env_isaaclab/bin/activate
 python ../RobotGPT/scripts/openpi_agent.py --task "$TASK" \
 --enable_cameras \
-$OUTPUT_FLAG \
+$OUTPUT_FLAGS \
+$HOST_FLAG \
 --robot_type "$ROBOT_TYPE" \
 --output_dir "evaluation/${TRAIN_CONFIG}/${DATASET}/${CHECKPOINT}" \
 --num_rollouts "$NUM_ROLLOUTS" --max_duration "$MAX_DURATION" "${KIT_ARGS[@]}"

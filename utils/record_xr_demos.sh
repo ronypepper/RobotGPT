@@ -30,9 +30,6 @@ while [[ $# -gt 0 ]]; do
             ;;
         --help|-h)
             cat << EOF
-Usage:
-  $0 --task <TASK> --dataset <NAME> --num_demos <N>
-
 Required arguments:
   --task            Isaac Lab task name (remember to use the 'IK-Abs' variant)
   --dataset         Name of the dataset to save in robotgpt_output/datasets/hdf5/
@@ -109,5 +106,6 @@ echo "Starting simulation and task collection..."
 source env_isaaclab/bin/activate
 python RobotGPT/scripts/record_demos.py --task "$TASK" \
 --enable_cameras --xr --experience robotgpt.python.xr.openxr.kit \
+--device cuda \
 --dataset_file "$DATASET_PATH" --num_demos "$NUM_DEMOS" &> "$OUT_STREAM"
 echo "Task collection completed."

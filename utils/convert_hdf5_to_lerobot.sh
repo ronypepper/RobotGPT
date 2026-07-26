@@ -37,9 +37,6 @@ while [[ $# -gt 0 ]]; do
             ;;
         --help|-h)
             cat << EOF
-Usage:
-  $0 --hf_user <USER> --dataset <NAME> --robot_type <ROBOT>
-
 Required arguments:
   --hf_user         Hugging Face username of dataset creator
   --dataset         Name of the HDF5 dataset stored in robotgpt_output/datasets/hdf5/

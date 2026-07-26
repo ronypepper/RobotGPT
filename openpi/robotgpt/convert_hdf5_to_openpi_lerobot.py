@@ -20,7 +20,6 @@ import pathlib
 import shutil
 from itertools import islice
 
-import configurations
 import h5py
 import numpy as np
 import tyro

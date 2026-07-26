@@ -35,9 +35,6 @@ while [[ $# -gt 0 ]]; do
             ;;
         --help|-h)
             cat << EOF
-Usage:
-  $0 --config <CONFIG> --dataset <NAME>
-
 Required arguments:
   --config          Name of the openpi TrainConfig to use for training
   --hf_user         Hugging Face username of the dataset used for training in robotgpt_output/datasets/lerobot/

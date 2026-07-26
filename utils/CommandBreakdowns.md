@@ -52,6 +52,6 @@ XLA_PYTHON_CLIENT_MEM_FRACTION=0.5 python -m robotgpt.serve_policy \
 cd robotgpt_output
 source ../env_isaaclab/bin/activate
 python ../RobotGPT/scripts/openpi_agent.py --task RobotGPT-Place-Cube-In-Bin-Franka-Single-Arm-Pos-v0 \
---viz kit --record_scene --record_table --record_wrists \
---output_dir=robotgpt_output/evaluation/TRAIN_CONFIG/DATASET_NAME/4999
+--enable_cameras --robot_type franka_single_arm --record_scene --record_table --record_wrists \
+--output_dir=evaluation/TRAIN_CONFIG/DATASET_NAME/4999
 ```
