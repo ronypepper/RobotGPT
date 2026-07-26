@@ -14,6 +14,7 @@ MAX_DURATION=0
 ANNOTATE=0
 RECORD_TABLE=0
 RECORD_WRISTS=0
+SHOW_VISUALIZATION=0
 VERBOSE=0
 
 while [[ $# -gt 0 ]]; do
@@ -75,6 +76,10 @@ while [[ $# -gt 0 ]]; do
             RECORD_WRISTS=1
             shift 1
             ;;
+        --viz)
+            SHOW_VISUALIZATION=1
+            shift 1
+            ;;
         --verbose)
             VERBOSE=1
             shift 1
@@ -97,6 +102,7 @@ Optional:
   --record_table    Record videos of the table camera observations.
   --record_wrists   Record videos of the wrist camera observations.
   --verbose         Print logs and error messages
+  --viz             Show visualization (kit)
   -h, --help        Show this help message
 
 Example:
@@ -234,6 +240,12 @@ if [[ "$RECORD_WRISTS" -eq 1 ]]; then
     OUTPUT_FLAGS+=" --record_wrists"
 fi
 
+# Resolve if visualization should be showed
+VIZ_FLAG=""
+if [[ "$SHOW_VISUALIZATION" -eq 1 ]]; then
+    VIZ_FLAG="--viz kit"
+fi
+
 # Start task simulation with openpi client
 echo "Starting simulation..."
 source ../env_isaaclab/bin/activate
@@ -241,6 +253,7 @@ python ../RobotGPT/scripts/openpi_agent.py --task "$TASK" \
 --enable_cameras \
 $OUTPUT_FLAGS \
 $HOST_FLAG \
+$VIZ_FLAG \
 --robot_type "$ROBOT_TYPE" \
 --output_dir "evaluation/${TRAIN_CONFIG}/${DATASET}/${CHECKPOINT}" \
 --num_rollouts "$NUM_ROLLOUTS" --max_duration "$MAX_DURATION" "${KIT_ARGS[@]}"
