@@ -6,14 +6,15 @@ Copyright (c) 2026 ronypepper.
 License: Apache 2.0
 """
 
-from robotgpt.robot_configs.franka_single_arm_configs import (
+from robotgpt.hdf5_interfaces.franka_single_arm_hdf5_interfaces import (
     get_data_dimensions_franka_single_arm,
     process_hdf5_frame_franka_single_arm
 )
-from robotgpt.robot_configs.franka_dual_arm_configs import (
+from robotgpt.hdf5_interfaces.franka_dual_arm_hdf5_interfaces import (
     get_data_dimensions_franka_dual_arm,
     process_hdf5_frame_franka_dual_arm
 )
+
 
 # HDF5 dataset interface functions for implemented robot types
 HDF5_DATASET_INTERFACE_FCTS = {
