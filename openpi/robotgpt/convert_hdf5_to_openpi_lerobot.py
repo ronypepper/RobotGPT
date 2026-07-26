@@ -23,7 +23,7 @@ from itertools import islice
 import h5py
 import numpy as np
 import tyro
-from hdf5_dataset_interfaces import get_hdf5_dataset_interface_fcts
+from robotgpt.hdf5_dataset_interfaces import get_hdf5_dataset_interface_fcts
 from lerobot.common.datasets.lerobot_dataset import HF_LEROBOT_HOME, LeRobotDataset
 from tqdm import tqdm
 
