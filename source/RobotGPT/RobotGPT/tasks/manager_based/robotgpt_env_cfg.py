@@ -19,6 +19,8 @@ Derivative configurations define specific task props, robots and optionally task
 """
 from dataclasses import MISSING
 
+# from isaaclab_newton.physics import MJWarpSolverCfg, NewtonCfg
+# from isaaclab_newton.renderers import NewtonWarpRendererCfg
 from isaaclab_physx.physics import PhysxCfg
 
 import isaaclab.envs.mdp as mdp
@@ -32,6 +34,7 @@ from isaaclab.managers import SceneEntityCfg
 from isaaclab.managers import TerminationTermCfg as DoneTerm
 from isaaclab.scene import InteractiveSceneCfg
 from isaaclab.sensors import CameraCfg
+from isaaclab.sim.schemas import CollisionPropertiesCfg
 from isaaclab.sim.spawners.from_files.from_files_cfg import UsdFileCfg
 from isaaclab.utils import configclass
 from isaaclab.utils.assets import ISAAC_NUCLEUS_DIR, NVIDIA_NUCLEUS_DIR
@@ -98,6 +101,7 @@ class RobotGPTBaseSceneCfg(InteractiveSceneCfg):
             pos=(0.1009906081856474, -2.2170453280873081e-7, 0.005195286872436311),
             rot=(0.68618, 0.68618, 0.17074, 0.17074), convention="opengl"
         ),
+        # renderer_cfg=NewtonWarpRendererCfg(create_default_light=False, enable_shadows=True)
     )
 
     right_wrist_cam : CameraCfg | None = None
@@ -117,6 +121,7 @@ class RobotGPTBaseSceneCfg(InteractiveSceneCfg):
                 pos=(0.1009906081856474, -2.2170453280873081e-7, 0.005195286872436311),
                 rot=(0.68618, 0.68618, 0.17074, 0.17074), convention="opengl"
             ),
+            # renderer_cfg=NewtonWarpRendererCfg(create_default_light=False, enable_shadows=True)
         )
 
     # Table view camera
@@ -133,6 +138,7 @@ class RobotGPTBaseSceneCfg(InteractiveSceneCfg):
             pos=(-0.03890996200355793, 0.9736847657158553, 0.8084830725058005),
             rot=(0.09143, -0.47766, -0.83945, 0.24249), convention="opengl"
         ),
+        # renderer_cfg=NewtonWarpRendererCfg(create_default_light=False, enable_shadows=True)
     )
 
     #
@@ -145,7 +151,7 @@ class RobotGPTBaseSceneCfg(InteractiveSceneCfg):
         init_state=AssetBaseCfg.InitialStateCfg(pos=(0.5, 0, 0), rot=(0, 0, 0.707, 0.707)),
         spawn=UsdFileCfg(
             usd_path=f"{ISAAC_NUCLEUS_DIR}/Props/Mounts/SeattleLabTable/table_instanceable.usd",
-            scale=(2.0, 1.0, 1.0),
+            scale=(2.0, 1.0, 1.0)
         )
     )
 
@@ -155,6 +161,9 @@ class RobotGPTBaseSceneCfg(InteractiveSceneCfg):
         init_state=AssetBaseCfg.InitialStateCfg(pos=(0, 0, -1)),
         spawn=UsdFileCfg(
             usd_path=f"{ISAAC_NUCLEUS_DIR}/Environments/Simple_Warehouse/warehouse.usd",
+            collision_props=CollisionPropertiesCfg(
+                collision_enabled=False,
+            )
         ),
     )
 
@@ -311,10 +320,11 @@ class RobotGPTEnvCfg(ManagerBasedRLEnvCfg):
     def __post_init__(self):
         """Post initialization."""
         # general settings
-        self.decimation = 5
+        self.decimation = 3
         self.episode_length_s = 30.0
+
         # simulation settings
-        self.sim.dt = 0.01  # 100Hz
+        self.sim.dt = 1 / 60.0
         self.sim.render_interval = self.decimation
 
         self.sim.physics = PhysxCfg(
@@ -323,6 +333,17 @@ class RobotGPTEnvCfg(ManagerBasedRLEnvCfg):
             gpu_total_aggregate_pairs_capacity=16 * 1024,
             friction_correlation_distance=0.00625,
         )
+        # self.sim.physics = NewtonCfg(
+        #     solver_cfg=MJWarpSolverCfg(
+        #         njmax=50,
+        #         nconmax=20,
+        #         cone="pyramidal",
+        #         integrator="implicitfast",
+        #         impratio=1,
+        #     ),
+        #     num_substeps=1,
+        #     debug_mode=False,
+        # )
 
         # Set settings for camera rendering
         self.num_rerenders_on_reset = 3
@@ -338,7 +359,7 @@ class RobotGPTEnvCfg(ManagerBasedRLEnvCfg):
             "dt": self.sim.dt,
             "decimation": self.decimation,
             "render_interval": self.sim.render_interval,
-            "num_envs": self.scene.num_envs,
+            "num_envs": self.scene.num_envs
         }
 
         # Add prompt

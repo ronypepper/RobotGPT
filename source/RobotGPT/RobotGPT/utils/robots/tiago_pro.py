@@ -36,7 +36,7 @@ import RobotGPT.utils.robots.base_configurations.tiago_pro_cfg as tiago_pro_cfg
 
 def setup_tiago_pro_joint_pos_env(env_cfg: RobotGPTEnvCfg, dual_arm: bool):
     # Adjust scene
-    env_cfg.scene.table.init_state.pos = (10.65, 0, 0)
+    env_cfg.scene.table.init_state.pos = (0.6, 0, 0)
     env_cfg.scene.table.init_state.rot = (0, 0, -0.707, 0.707)
     env_cfg.scene.background.init_state.pos = (0, 0, -0.6)
 
@@ -209,10 +209,11 @@ def process_openpi_action_tiago_pro(action: np.array):
     # We also duplicate the gripper actions for the environment.
     if len(action) == 8:
         # Single arm variant
-        action[7] = (action[7] * -2) + 1
-        return np.append(action, action[7])
+        gripper_action = (action[7] * -2) + 1
+        return np.concatenate((action[:7], (gripper_action, gripper_action)))
     else:
         # Dual arm variant
-        action[7] = (action[7] * -2) + 1
-        action[15] = (action[15] * -2) + 1
-        return np.concatenate((action[:8], action[7], action[8:], action[15]))
+        left_gripper_action = (action[7] * -2) + 1
+        right_gripper_action = (action[15] * -2) + 1
+        return np.concatenate((action[:7], (left_gripper_action, left_gripper_action),
+                               action[8:15], (right_gripper_action, right_gripper_action)))

@@ -51,21 +51,21 @@ GOOGLE_SCANNED_OBJECTS_ITEMS = [
 ]
 
 ITEMS_SCALES = [
-    (0.6, 0.8, 0.9),
+    (0.6, 0.7, 0.7),
+    (0.7, 0.9, 0.7),
+    (0.8, 0.8, 0.8),
+    (0.8, 0.8, 0.8),
+    (0.8, 0.5, 0.8),
     (0.7, 1.0, 1.0),
+    (0.8, 0.9, 0.7),
     (1.0, 1.0, 1.0),
-    (1.0, 1.0, 1.0),
-    (1.0, 0.65, 1.0),
-    (1.0, 1.0, 1.0),
-    (1.0, 1.0, 0.7),
+    (0.7, 0.7, 0.7),
     (1.0, 1.0, 1.0),
     (0.8, 0.8, 0.8),
-    (1.0, 1.0, 1.0),
+    (0.5, 0.9, 0.9),
+    (0.7, 0.7, 0.7),
+    (0.8, 0.8, 0.8),
     (0.9, 0.9, 0.9),
-    (0.6, 1.0, 1.0),
-    (0.9, 0.9, 0.8),
-    (0.9, 0.9, 0.9),
-    (1.0, 1.0, 1.0),
 ]
 
 ITEMS_DEFAULT_POSITIONS = [
@@ -107,10 +107,10 @@ class PackItemsSceneCfg(RobotGPTBaseSceneCfg):
 
     bin = RigidObjectCfg(
         prim_path="{ENV_REGEX_NS}/bin",
-        init_state=RigidObjectCfg.InitialStateCfg(pos=(0.45, -0.35, 0.1), rot=(0, 0, 0.7071068, 0.7071068)),
+        init_state=RigidObjectCfg.InitialStateCfg(pos=(0.45, -0.3, 0.1), rot=(0, 0, 0.7071068, 0.7071068)),
         spawn=UsdFileCfg(
             usd_path=f"{ISAAC_NUCLEUS_DIR}/Props/KLT_Bin/small_KLT.usd",
-            scale=(1.2, 1.2, 1.2),
+            scale=(1.1, 1.1, 1.1),
             rigid_props=RigidBodyPropertiesCfg(
                 solver_position_iteration_count=16,
                 solver_velocity_iteration_count=1,
@@ -136,24 +136,25 @@ class PackItemsEventCfg(RobotGPTEventCfg):
         func=mdp.reset_root_state_uniform,
         mode="reset",
         params={
-            "pose_range": {"x": (-0.1, 0.1), "y": (-0.025, 0.025), "yaw": (-0.5, 0.5)},
+            "pose_range": {"x": (-0.1, 0.1), "y": (-0.015, 0.025), "yaw": (-0.5, 0.5)},
             "velocity_range": {},
             "asset_cfg": SceneEntityCfg("bin"),
         },
     )
 
-    randomize_cube_position = EventTerm(
+    randomize_item_positions = EventTerm(
         func=reset_multiple_objects_randomly,
         mode="reset",
         params={
-            "pose_range": {"x": (-0.025, 0.025), "y": (-0.025, 0.025)},
+            "pose_range": {"x": (-0.02, 0.02), "y": (-0.02, 0.02)},
             "init_positions": [
                 (0.5, 0.125, 0.15),
-                (0.675, -0.05, 0.15),
-                (0.675, 0.3, 0.15),
-                (0.325, -0.05, 0.15),
-                (0.325, 0.3, 0.15),
+                (0.55, 0.025, 0.15),
+                (0.55, 0.225, 0.15),
+                (0.45, 0.025, 0.15),
+                (0.45, 0.225, 0.15),
             ],
+            "num_inits_range": (3, 5),
             "hide_offset": (-4.0, 0.0, -1.0),
             "items_cfg": SceneEntityCfg("items"),
         },
@@ -164,14 +165,7 @@ class PackItemsEventCfg(RobotGPTEventCfg):
 class PackItemsTerminationsCfg(RobotGPTTerminationsCfg):
     """Termination terms for the MDP."""
 
-    # success = DoneTerm(func=object_in_container, params={
-    #         "object_cfg": SceneEntityCfg("cube"),
-    #         "container_cfg": SceneEntityCfg("bin"),
-    #         "container_halfsize_x": 9.971924 / 100,
-    #         "container_halfsize_y": 14.951359 / 100,
-    #         "container_halfsize_z": 13.640263 / 2 / 100,
-    #     }
-    # )
+    pass
 
 
 ##

@@ -196,18 +196,17 @@ class EnvStepDifferentialInverseKinematicsAction(ActionTerm):
     """
 
     def process_actions(self, actions: torch.Tensor):
+         # obtain quantities from simulation
+        ee_pos_w = self._asset.data.body_pos_w.torch[:, self._body_idx]
+        ee_quat_w = self._asset.data.body_quat_w.torch[:, self._body_idx]
+
         # Auto set world offset on first call
         if self.cfg.auto_world_offset and self._world_offset_pos is None:
-            # obtain quantities from simulation
-            ee_pos_w = self._asset.data.body_pos_w.torch[:, self._body_idx]
-            ee_quat_w = self._asset.data.body_quat_w.torch[:, self._body_idx]
-
-            self._world_offset_pos, self._world_offset_rot = math_utils.subtract_frame_transforms(
-                actions[:, :3], actions[:, 3:], ee_pos_w, ee_quat_w
-            )
+            self._world_offset_rot = math_utils.quat_mul(ee_quat_w, math_utils.quat_inv(actions[:, 3:]))
+            self._world_offset_pos = math_utils.quat_apply(self._world_offset_rot, -actions[:, :3]) + ee_pos_w
 
         # Apply world offset
-        if self.cfg.world_offset is not None:
+        if self._world_offset_pos is not None:
             actions[:, :3], actions[:, 3:] = math_utils.combine_frame_transforms(
                 self._world_offset_pos, self._world_offset_rot, actions[:, :3], actions[:, 3:]
             )
@@ -220,7 +219,7 @@ class EnvStepDifferentialInverseKinematicsAction(ActionTerm):
                 self._scaled_clipped_actions, min=self._clip[:, :, 0], max=self._clip[:, :, 1]
             )
         # obtain quantities from simulation
-        ee_pos_curr, ee_quat_curr = self._compute_frame_pose()
+        ee_pos_curr, ee_quat_curr = ee_pos_w, ee_quat_w # self._compute_frame_pose()
         # set command into controller
         self._ik_controller.set_command(self._scaled_clipped_actions, ee_pos_curr, ee_quat_curr)
 
@@ -239,6 +238,8 @@ class EnvStepDifferentialInverseKinematicsAction(ActionTerm):
 
     def reset(self, env_ids: Sequence[int] | None = None) -> None:
         self._raw_actions[env_ids] = 0.0
+        if self.cfg.auto_world_offset:
+            self._world_offset_pos, self._world_offset_rot = None, None
 
     """
     Helper functions.

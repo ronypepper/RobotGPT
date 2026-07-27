@@ -161,11 +161,6 @@ def main() -> None:
         )
     # modify configuration
     env_cfg.terminations.time_out = None
-    if "Lift" in args_cli.task:
-        # set the resampling time range to large number to avoid resampling
-        env_cfg.commands.object_pose.resampling_time_range = (1.0e9, 1.0e9)
-        # add termination condition for reaching the goal otherwise the environment won't reset
-        env_cfg.terminations.object_reached_goal = DoneTerm(func=mdp.object_reached_goal)
 
     # When --teleop_device is explicitly provided, use the legacy teleop_devices path
     # even if isaac_teleop is configured. Otherwise prefer isaac_teleop when available.
@@ -183,12 +178,6 @@ def main() -> None:
     try:
         # create environment
         env = gym.make(args_cli.task, cfg=env_cfg).unwrapped
-        # check environment name (for reach , we don't allow the gripper)
-        if "Reach" in args_cli.task:
-            logger.warning(
-                f"The environment '{args_cli.task}' does not support gripper control. The device command will be"
-                " ignored."
-            )
     except Exception as e:
         logger.error(f"Failed to create environment: {e}")
         simulation_app.close()

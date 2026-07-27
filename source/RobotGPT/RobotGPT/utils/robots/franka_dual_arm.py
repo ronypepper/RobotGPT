@@ -30,16 +30,20 @@ except ImportError:
     _TELEOP_AVAILABLE = False
     logging.getLogger(__name__).warning("isaaclab_teleop is not installed. XR teleoperation features will be disabled.")
 
+from isaaclab.utils.assets import ISAACLAB_NUCLEUS_DIR
+
 from isaaclab_assets.robots.franka import FRANKA_PANDA_HIGH_PD_CFG
 
 
 def setup_franka_dual_arm_joint_pos_env(env_cfg: RobotGPTEnvCfg):
     # Set Franka as left arm robot (seen from behind the robot looking at workspace)
     env_cfg.scene.robot = FRANKA_PANDA_HIGH_PD_CFG.replace(prim_path="{ENV_REGEX_NS}/Robot")
+    env_cfg.scene.robot.spawn.usd_path = f"{ISAACLAB_NUCLEUS_DIR}/Robots/FrankaEmika/Legacy/panda_instanceable.usd"
     env_cfg.scene.robot.init_state.pos = (0.0, 0.2825, 0.0)
 
     # Set Franka as right arm robot (seen from behind the robot looking at workspace)
     env_cfg.scene.robot_2 = FRANKA_PANDA_HIGH_PD_CFG.replace(prim_path="{ENV_REGEX_NS}/Robot_2")
+    env_cfg.scene.robot_2.spawn.usd_path = f"{ISAACLAB_NUCLEUS_DIR}/Robots/FrankaEmika/Legacy/panda_instanceable.usd"
     env_cfg.scene.robot_2.init_state.pos = (0.0, -0.2825, 0.0)
 
     # Intitialize right wirst camera
@@ -79,15 +83,15 @@ def setup_franka_dual_arm_joint_pos_env(env_cfg: RobotGPTEnvCfg):
     env_cfg.actions.gripper_action = mdp.JointPositionActionCfg(
         asset_name="robot",
         joint_names=["panda_finger.*"],
-        scale=-0.04,
-        offset=0.04,
+        scale=0.02,
+        offset=0.02,
         use_default_offset=False
     )
     env_cfg.actions.gripper_action_2 = mdp.JointPositionActionCfg(
         asset_name="robot_2",
         joint_names=["panda_finger.*"],
-        scale=-0.04,
-        offset=0.04,
+        scale=0.02,
+        offset=0.02,
         use_default_offset=False
     )
 
@@ -113,16 +117,18 @@ def setup_franka_dual_arm_ik_abs_env(env_cfg: RobotGPTEnvCfg):
         joint_names=["panda_joint.*"],
         body_name="panda_hand",
         controller=DifferentialIKControllerCfg(command_type="pose", use_relative_mode=False, ik_method="dls"),
-        body_offset=EnvStepDifferentialInverseKinematicsActionCfg.OffsetCfg(pos=(0.0, 0.0, 0.107)),
-        world_offset=EnvStepDifferentialInverseKinematicsActionCfg.OffsetCfg(pos=(-0.3, -0.02, 0.0)),
+        # body_offset=EnvStepDifferentialInverseKinematicsActionCfg.OffsetCfg(pos=(0.0, 0.0, 0.107)),
+        # world_offset=EnvStepDifferentialInverseKinematicsActionCfg.OffsetCfg(pos=(-0.3, -0.02, 0.0)),
+        auto_world_offset=True
     )
     env_cfg.actions.arm_action_2 = EnvStepDifferentialInverseKinematicsActionCfg(
         asset_name="robot_2",
         joint_names=["panda_joint.*"],
         body_name="panda_hand",
         controller=DifferentialIKControllerCfg(command_type="pose", use_relative_mode=False, ik_method="dls"),
-        body_offset=EnvStepDifferentialInverseKinematicsActionCfg.OffsetCfg(pos=(0.0, 0.0, 0.107)),
-        world_offset=EnvStepDifferentialInverseKinematicsActionCfg.OffsetCfg(pos=(-0.3, -0.02, 0.0)),
+        # body_offset=EnvStepDifferentialInverseKinematicsActionCfg.OffsetCfg(pos=(0.0, 0.0, 0.107)),
+        # world_offset=EnvStepDifferentialInverseKinematicsActionCfg.OffsetCfg(pos=(-0.3, -0.02, 0.0)),
+        auto_world_offset=True
     )
 
     # Teleoperation configuration
@@ -167,6 +173,7 @@ def process_openpi_action_franka_dual_arm(action: np.array):
     # The environment expects gripper positions to be in [1.0, -1.0], with 1.0 corresponding to fully open and -1.0 corresponding to fully closed.
     # Therefore we adjust the gripper actions to fit the environment's format.
     # We also duplicate the gripper actions for the environment.
-    action[7] = (action[7] * -2) + 1
-    action[15] = (action[15] * -2) + 1
-    return np.concatenate((action[:8], action[7], action[8:], action[15]))
+    left_gripper_action = (action[7] * -2) + 1
+    right_gripper_action = (action[15] * -2) + 1
+    return np.concatenate((action[:7], (left_gripper_action, left_gripper_action),
+                           action[8:15], (right_gripper_action, right_gripper_action)))

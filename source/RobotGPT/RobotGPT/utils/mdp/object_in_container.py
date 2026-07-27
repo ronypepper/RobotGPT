@@ -49,8 +49,8 @@ def object_in_container(
         (local_pos[:, 2] < container_halfsize_z)
     )
 
-    object_lin_speed = torch.linalg.norm(object.data.root_lin_vel_b.torch, dim=1)
-    object_ang_speed = torch.linalg.norm(object.data.root_ang_vel_b.torch, dim=1)
-    is_object_still = (object_lin_speed < 0.001) & (object_ang_speed < 0.001)
+    object_lin_speed = torch.linalg.norm(object.data.root_lin_vel_w.torch, dim=1)
+    object_ang_speed = torch.linalg.norm(object.data.root_ang_vel_w.torch, dim=1)
+    is_object_still = (object_lin_speed < 0.01) & (object_ang_speed < 0.02)
 
     return is_object_in_container & is_object_still

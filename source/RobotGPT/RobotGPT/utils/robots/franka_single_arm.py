@@ -30,12 +30,15 @@ except ImportError:
     _TELEOP_AVAILABLE = False
     logging.getLogger(__name__).warning("isaaclab_teleop is not installed. XR teleoperation features will be disabled.")
 
+from isaaclab.utils.assets import ISAACLAB_NUCLEUS_DIR
+
 from isaaclab_assets.robots.franka import FRANKA_PANDA_HIGH_PD_CFG
 
 
 def setup_franka_single_arm_joint_pos_env(env_cfg: RobotGPTEnvCfg):
     # Set Franka as robot
     env_cfg.scene.robot = FRANKA_PANDA_HIGH_PD_CFG.replace(prim_path="{ENV_REGEX_NS}/Robot")
+    env_cfg.scene.robot.spawn.usd_path = f"{ISAACLAB_NUCLEUS_DIR}/Robots/FrankaEmika/Legacy/panda_instanceable.usd"
 
     # Configure default pose with vertically aligned gripper orientation
     env_cfg.scene.robot.init_state.joint_pos = {
@@ -83,8 +86,9 @@ def setup_franka_single_arm_ik_abs_env(env_cfg: RobotGPTEnvCfg):
         joint_names=["panda_joint.*"],
         body_name="panda_hand",
         controller=DifferentialIKControllerCfg(command_type="pose", use_relative_mode=False, ik_method="dls"),
-        body_offset=EnvStepDifferentialInverseKinematicsActionCfg.OffsetCfg(pos=(0.0, 0.0, 0.107)),
-        world_offset=EnvStepDifferentialInverseKinematicsActionCfg.OffsetCfg(pos=(-0.3, -0.02, 0.0)),
+        # body_offset=EnvStepDifferentialInverseKinematicsActionCfg.OffsetCfg(pos=(0.0, 0.0, 0.107)),
+        # world_offset=EnvStepDifferentialInverseKinematicsActionCfg.OffsetCfg(pos=(-0.3, -0.02, 0.0)),
+        auto_world_offset=True
     )
 
     # Teleoperation configuration
@@ -123,5 +127,5 @@ def process_openpi_action_franka_single_arm(action: np.array):
     # The environment expects gripper positions to be in [1.0, -1.0], with 1.0 corresponding to fully open and -1.0 corresponding to fully closed.
     # Therefore we adjust the gripper action to fit the environment's format.
     # We also duplicate the gripper action for the environment.
-    action[7] = (action[7] * -2) + 1
-    return np.append(action, action[7])
+    gripper_action = (action[7] * -2) + 1
+    return np.concatenate((action[:7], (gripper_action, gripper_action)))

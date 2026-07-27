@@ -47,10 +47,15 @@ class FoldTowelSceneCfg(RobotGPTBaseSceneCfg):
         init_state=DeformableObjectCfg.InitialStateCfg(pos=(0.4, 0.0, 0.05)),
         spawn=sim_utils.MeshRectangleCfg(
             size=(0.4, 0.5),
-            resolution=(50, 50),
+            resolution=(40, 50),
             deformable_props=PhysxDeformableBodyPropertiesCfg(),
             visual_material=sim_utils.PreviewSurfaceCfg(diffuse_color=(0.1, 0.95, 0.1)),
-            physics_material=PhysxSurfaceDeformableBodyMaterialCfg(),
+            physics_material=PhysxSurfaceDeformableBodyMaterialCfg(
+                density=250,
+                youngs_modulus=3e5,
+                poissons_ratio=0.3,
+                dynamic_friction=0.9,
+            )
         ),
     )
 

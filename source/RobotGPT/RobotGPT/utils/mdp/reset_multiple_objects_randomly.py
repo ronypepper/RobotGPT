@@ -33,21 +33,20 @@ def reset_multiple_objects_randomly(
     env_ids: torch.Tensor,
     pose_range: dict[str, tuple[float, float]],
     init_positions: list[tuple[float, float, float]],
+    num_inits_range: tuple[int, int],
     hide_offset: tuple[float, float, float],
     items_cfg: SceneEntityCfg = SceneEntityCfg("items"),
 ):
     # extract the used quantities (to enable type-hinting)
     items: RigidObjectCollection = env.scene[items_cfg.name]
 
-    num_objects = len(init_positions)
-    if num_objects > items.num_bodies:
-        raise ValueError("Cannot reset more objects than in item collection")
+    if num_inits_range[0] < 1 or num_inits_range[1] > len(init_positions) or num_inits_range[1] > items.num_bodies:
+        raise ValueError("num_inits_range is invalid")
 
     # Select random objects
+    num_objects = random.randint(*num_inits_range)
     object_ids = list(range(items.num_bodies))
     init_ids = random.sample(object_ids, num_objects)
-    if num_objects < items.num_bodies:
-        hide_ids = [i for i in object_ids if i not in init_ids]
 
     # get default body states
     default_pose = items.data.default_body_pose.torch[env_ids].clone()
@@ -58,7 +57,8 @@ def reset_multiple_objects_randomly(
     ranges = torch.tensor(range_list, device=items.device)
     rand_samples = math_utils.sample_uniform(ranges[:, 0], ranges[:, 1], (len(env_ids), num_objects, 3), device=items.device)
 
-    init_positions_torch = torch.tensor(init_positions, device=items.device)[None, :, :]
+    init_positions_torch = torch.tensor(init_positions, device=items.device)#[None, :, :]
+    init_positions_torch = init_positions_torch[None, random.sample(range(len(init_positions)), num_objects), :]
     positions = init_positions_torch + env.scene.env_origins[env_ids][:, None, :] + rand_samples
     orientations = math_utils.random_orientation(len(env_ids), device=items.device)
 
@@ -67,6 +67,7 @@ def reset_multiple_objects_randomly(
 
     # Move not-selected objects away
     if num_objects < items.num_bodies:
+        hide_ids = [i for i in object_ids if i not in init_ids]
         default_pose[env_ids, hide_ids, :3] += torch.tensor(hide_offset, device=items.device)
 
     # set into the physics simulation
