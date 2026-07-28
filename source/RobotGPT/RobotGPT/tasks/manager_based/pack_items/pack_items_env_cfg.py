@@ -33,47 +33,56 @@ from RobotGPT.utils.mdp.object_in_container import object_in_container
 from RobotGPT.utils.mdp.reset_multiple_objects_randomly import reset_multiple_objects_randomly
 
 ##
+# Prompt item target selection
+##
+
+ITEM_TARGET_ID = 8  # 0-9
+
+##
 # Scene definition
 ##
 
 GOOGLE_SCANNED_OBJECTS_ITEMS = [
-    "Nescafe_Momento_Mocha_Specialty_Coffee_Mix_8_ct",
     "NESCAFE_NESCAFE_TC_STKS_DECAF_6_CT",
     "Threshold_Porcelain_Coffee_Mug_All_Over_Bead_White",
     "Marc_Anthony_Skip_Professional_Oil_of_Morocco_Conditioner_with_Argan_Oil",
-    "Nestle_Nesquik_Chocolate_Powder_Flavored_Milk_Additive_109_Oz_Canister",
     "Nestle_Candy_19_oz_Butterfinger_Singles_116567",
-    "Polar_Herring_Fillets_Smoked_Peppered_705_oz_total",
     "YumYum_D3_Liquid",
     "Cole_Hardware_Mug_Classic_Blue",
     "Shurtape_30_Day_Removal_UV_Delct_15",
     "Shurtape_Gaffers_Tape_Silver_2_x_60_yd",
     "Nestle_Nips_Hard_Candy_Peanut_Butter",
-    "HeavyDuty_Flashlight",
     "Weston_No_22_Cajun_Jerky_Tonic_12_fl_oz_nLj64ZnGwDh",
-    "Wilton_Pearlized_Sugar_Sprinkles_525_oz_Gold",
 ]
 
 ITEMS_SCALES = [
-    (0.6, 0.7, 0.7),
-    (0.7, 0.9, 0.7),
+    (0.7, 1.0, 0.7),
     (0.8, 0.8, 0.8),
+    (0.8, 0.8, 0.6),
+    (0.7, 0.8, 1.0),
+    (1.0, 0.7, 1.0),
+    (0.6, 0.6, 0.8),
+    (0.8, 0.8, 0.7),
     (0.8, 0.8, 0.8),
-    (0.8, 0.5, 0.8),
-    (0.7, 1.0, 1.0),
-    (0.8, 0.9, 0.7),
-    (1.0, 1.0, 1.0),
+    (0.5, 0.8, 0.8),
     (0.7, 0.7, 0.7),
-    (1.0, 1.0, 1.0),
-    (0.8, 0.8, 0.8),
-    (0.5, 0.9, 0.9),
-    (0.7, 0.7, 0.7),
-    (0.8, 0.8, 0.8),
-    (0.9, 0.9, 0.9),
 ]
 
 ITEMS_DEFAULT_POSITIONS = [
     (x, y, 0.05) for y in np.linspace(-0.5, 0.5, 5) for x in np.linspace(0.25, 0.75, 4)
+]
+
+ITEMS_DESCRIPTIONS = [
+    "green cardboard box",
+    "white mug",
+    "blue tube",
+    "candy bar",
+    "orange cardboard box",
+    "green mug",
+    "purple tape",
+    "white tape",
+    "yellow cardboard box",
+    "sauce bottle",
 ]
 
 @configclass
@@ -155,6 +164,7 @@ class PackItemsEventCfg(RobotGPTEventCfg):
             "num_inits_range": (3, 5),
             "hide_offset": (-4.0, 0.0, -1.0),
             "objects_cfg": SceneEntityCfg("items"),
+            "guaranteed_ids": [ITEM_TARGET_ID]
         },
     )
 
@@ -183,10 +193,10 @@ class PackItemsEnvCfg(RobotGPTEnvCfg):
     terminations: PackItemsTerminationsCfg = PackItemsTerminationsCfg()
 
     # Prompt for the openpi policy.
-    prompt: str = "Pick up the items on the table and drop them in the bin, one by one"
+    prompt: str = f"Pick up the {ITEMS_DESCRIPTIONS[ITEM_TARGET_ID]} and drop it in the bin"
 
     def __post_init__(self):
         """Post initialization."""
         super().__post_init__()
         # general settings
-        self.episode_length_s = 120.0
+        self.episode_length_s = 60.0

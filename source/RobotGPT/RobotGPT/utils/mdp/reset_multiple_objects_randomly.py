@@ -36,6 +36,7 @@ def reset_multiple_objects_randomly(
     num_inits_range: tuple[int, int],
     hide_offset: tuple[float, float, float],
     objects_cfg: SceneEntityCfg = SceneEntityCfg("items"),
+    guaranteed_ids: list[int] | None = None
 ):
     # extract the used quantities (to enable type-hinting)
     items: RigidObjectCollection = env.scene[objects_cfg.name]
@@ -43,10 +44,15 @@ def reset_multiple_objects_randomly(
     if num_inits_range[0] < 1 or num_inits_range[1] > len(init_positions) or num_inits_range[1] > items.num_bodies:
         raise ValueError("num_inits_range is invalid")
 
+    if guaranteed_ids is not None and len(guaranteed_ids) > num_inits_range[1]:
+        raise ValueError("guaranteed_ids is invalid")
+
     # Select random objects
     num_objects = random.randint(*num_inits_range)
     object_ids = list(range(items.num_bodies))
     init_ids = random.sample(object_ids, num_objects)
+    if guaranteed_ids is not None:
+        init_ids = guaranteed_ids + init_ids[len(guaranteed_ids):]
 
     # get default body states
     default_pose = items.data.default_body_pose.torch[env_ids].clone()

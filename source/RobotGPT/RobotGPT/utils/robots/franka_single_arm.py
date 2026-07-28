@@ -55,7 +55,7 @@ def setup_franka_single_arm_joint_pos_env(env_cfg: RobotGPTEnvCfg):
 
     # Set joint position actions for the specific robot type
     env_cfg.actions.arm_action = mdp.JointPositionActionCfg(
-        asset_name="robot", joint_names=["panda_joint.*"], preserve_order=True, use_default_offset=True
+        asset_name="robot", joint_names=["panda_joint.*"], preserve_order=True, use_default_offset=False
     )
 
     # Set gripper actions for the specific robot type

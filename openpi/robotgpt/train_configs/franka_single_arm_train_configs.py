@@ -158,8 +158,8 @@ franka_single_arm_train_configs = [
         ),
         weight_loader=weight_loaders.CheckpointWeightLoader("gs://openpi-assets/checkpoints/pi05_base/params"),
         num_train_steps=5_000,
-        save_interval=500,
-        keep_period=500,
+        save_interval=5_000,
+        keep_period=5_000,
         # The freeze filter defines which parameters should be frozen during training.
         freeze_filter=pi0_config.Pi0Config(
             pi05=True, paligemma_variant="gemma_2b_lora", action_expert_variant="gemma_300m_lora"

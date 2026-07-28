@@ -42,7 +42,7 @@ class PlaceCubeInBinSceneCfg(RobotGPTBaseSceneCfg):
         prim_path="{ENV_REGEX_NS}/cube",
         init_state=RigidObjectCfg.InitialStateCfg(pos=(0.5, 0.25, 0.05), rot=(0, 0, 0, 1)),
         spawn=UsdFileCfg(
-            usd_path=f"{ISAAC_NUCLEUS_DIR}/Props/Blocks/blue_block.usd",
+            usd_path=f"{ISAAC_NUCLEUS_DIR}/Props/Blocks/red_block.usd",
             scale=(1.5, 1.5, 1.5),
             rigid_props=RigidBodyPropertiesCfg(
                 solver_position_iteration_count=16,
@@ -134,7 +134,7 @@ class PlaceCubeInBinEnvCfg(RobotGPTEnvCfg):
     terminations: PlaceCubeInBinTerminationsCfg = PlaceCubeInBinTerminationsCfg()
 
     # Prompt for the openpi policy.
-    prompt: str = "Pick up the blue cube and drop it in the bin"
+    prompt: str = "Pick up the red cube and drop it in the bin"
 
     def __post_init__(self):
         """Post initialization."""
