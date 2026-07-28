@@ -84,7 +84,7 @@ def main(args: Args):
             hdf5_dataset["data"].attrs["env_args"]
         )  # Need to convert to dict from string representation here
         fps = int(1.0 / (env_args["sim_args"]["dt"] * env_args["sim_args"]["decimation"]))
-        prompt = env_args["prompt"]
+        prompt = env_args["prompt" if "prompt" in env_args else "prompt_0"]  # for compatibility with different datasets
 
         # Create LeRobot dataset, define features to store
         # OpenPi assumes that proprio is stored in `state` and actions in `action`

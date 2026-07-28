@@ -19,6 +19,7 @@ from RobotGPT.utils.mdp.env_step_differential_ik_action import EnvStepDifferenti
 import isaaclab.envs.mdp as mdp
 from isaaclab.controllers.differential_ik_cfg import DifferentialIKControllerCfg
 from isaaclab.devices.openxr.openxr_device import XrCfg
+from isaaclab.sensors import CameraCfg
 
 try:
     import isaacteleop  # noqa: F401  -- pipeline builders need isaacteleop at runtime
@@ -54,7 +55,7 @@ def setup_franka_single_arm_joint_pos_env(env_cfg: RobotGPTEnvCfg):
 
     # Set joint position actions for the specific robot type
     env_cfg.actions.arm_action = mdp.JointPositionActionCfg(
-        asset_name="robot", joint_names=["panda_joint.*"], preserve_order=True, use_default_offset=False
+        asset_name="robot", joint_names=["panda_joint.*"], preserve_order=True, use_default_offset=True
     )
 
     # Set gripper actions for the specific robot type
@@ -64,6 +65,13 @@ def setup_franka_single_arm_joint_pos_env(env_cfg: RobotGPTEnvCfg):
         scale=0.02,
         offset=0.02,
         use_default_offset=False
+    )
+
+    # Change table camera anchor to camera mounted in robot's head
+    env_cfg.scene.table_cam.offset=CameraCfg.OffsetCfg(
+        pos=(0.0, 0.72, 0.6),
+        rot=(0.09143, -0.47766, -0.83945, 0.24249),
+        convention="opengl"
     )
 
     # Set wrist camera anchor on robot

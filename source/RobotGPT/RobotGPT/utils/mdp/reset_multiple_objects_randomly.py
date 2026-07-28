@@ -35,10 +35,10 @@ def reset_multiple_objects_randomly(
     init_positions: list[tuple[float, float, float]],
     num_inits_range: tuple[int, int],
     hide_offset: tuple[float, float, float],
-    items_cfg: SceneEntityCfg = SceneEntityCfg("items"),
+    objects_cfg: SceneEntityCfg = SceneEntityCfg("items"),
 ):
     # extract the used quantities (to enable type-hinting)
-    items: RigidObjectCollection = env.scene[items_cfg.name]
+    items: RigidObjectCollection = env.scene[objects_cfg.name]
 
     if num_inits_range[0] < 1 or num_inits_range[1] > len(init_positions) or num_inits_range[1] > items.num_bodies:
         raise ValueError("num_inits_range is invalid")
@@ -60,7 +60,7 @@ def reset_multiple_objects_randomly(
     init_positions_torch = torch.tensor(init_positions, device=items.device)#[None, :, :]
     init_positions_torch = init_positions_torch[None, random.sample(range(len(init_positions)), num_objects), :]
     positions = init_positions_torch + env.scene.env_origins[env_ids][:, None, :] + rand_samples
-    orientations = math_utils.random_orientation(len(env_ids), device=items.device)
+    orientations = math_utils.random_orientation(num_objects, device=items.device)[None, :, :]
 
     default_pose[env_ids, init_ids, :3] = positions
     default_pose[env_ids, init_ids, 3:] = orientations

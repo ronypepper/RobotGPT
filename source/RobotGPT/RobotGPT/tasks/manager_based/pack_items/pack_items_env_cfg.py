@@ -32,6 +32,10 @@ from RobotGPT.utils.asset_root_path import ROBOTGPT_ASSETS_PATH
 from RobotGPT.utils.mdp.object_in_container import object_in_container
 from RobotGPT.utils.mdp.reset_multiple_objects_randomly import reset_multiple_objects_randomly
 
+##
+# Scene definition
+##
+
 GOOGLE_SCANNED_OBJECTS_ITEMS = [
     "Nescafe_Momento_Mocha_Specialty_Coffee_Mix_8_ct",
     "NESCAFE_NESCAFE_TC_STKS_DECAF_6_CT",
@@ -71,12 +75,6 @@ ITEMS_SCALES = [
 ITEMS_DEFAULT_POSITIONS = [
     (x, y, 0.05) for y in np.linspace(-0.5, 0.5, 5) for x in np.linspace(0.25, 0.75, 4)
 ]
-
-
-##
-# Scene definition
-##
-
 
 @configclass
 class PackItemsSceneCfg(RobotGPTBaseSceneCfg):
@@ -156,7 +154,7 @@ class PackItemsEventCfg(RobotGPTEventCfg):
             ],
             "num_inits_range": (3, 5),
             "hide_offset": (-4.0, 0.0, -1.0),
-            "items_cfg": SceneEntityCfg("items"),
+            "objects_cfg": SceneEntityCfg("items"),
         },
     )
 

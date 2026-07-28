@@ -215,7 +215,9 @@ cd ../../robotgpt_output
 # Start openpi policy server if not remotely served
 HOST_FLAG=""
 if [[ "$REMOTE_HOST" != "localhost" ]]; then
+    echo "Using remote openpi policy server."
     HOST_FLAG="--remote_host ${REMOTE_HOST}"
+else
     (
         echo "Starting openpi policy server..."
         source ../openpi/.venv/bin/activate

@@ -320,11 +320,11 @@ class RobotGPTEnvCfg(ManagerBasedRLEnvCfg):
     def __post_init__(self):
         """Post initialization."""
         # general settings
-        self.decimation = 3
+        self.decimation = 5
         self.episode_length_s = 30.0
 
         # simulation settings
-        self.sim.dt = 1 / 60.0
+        self.sim.dt = 1 / 100.0
         self.sim.render_interval = self.decimation
 
         self.sim.physics = PhysxCfg(
@@ -363,6 +363,6 @@ class RobotGPTEnvCfg(ManagerBasedRLEnvCfg):
         }
 
         # Add prompt
-        ep_meta['prompt'] = self.prompt
+        ep_meta["prompt"] = self.prompt
 
         return ep_meta
