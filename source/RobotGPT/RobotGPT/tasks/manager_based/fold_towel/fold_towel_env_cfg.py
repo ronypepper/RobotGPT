@@ -51,10 +51,14 @@ class FoldTowelSceneCfg(RobotGPTBaseSceneCfg):
             deformable_props=PhysxDeformableBodyPropertiesCfg(),
             visual_material=sim_utils.PreviewSurfaceCfg(diffuse_color=(0.1, 0.95, 0.1)),
             physics_material=PhysxSurfaceDeformableBodyMaterialCfg(
-                density=250,
-                youngs_modulus=3e5,
-                poissons_ratio=0.3,
-                dynamic_friction=0.9,
+                surface_thickness=0.001,
+                surface_stretch_stiffness=10000,
+                surface_bend_stiffness=8000,
+                surface_shear_stiffness=1.5,
+                # density=250,
+                # youngs_modulus=3e5,
+                # poissons_ratio=0.3,
+                # dynamic_friction=0.9,
             )
         ),
     )

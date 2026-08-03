@@ -36,7 +36,7 @@ from RobotGPT.utils.mdp.reset_multiple_objects_randomly import reset_multiple_ob
 # Prompt item target selection
 ##
 
-ITEM_TARGET_ID = 8  # 0-9
+ITEM_TARGET_ID = 2  # 0-9
 
 ##
 # Scene definition
@@ -164,7 +164,7 @@ class PackItemsEventCfg(RobotGPTEventCfg):
             "num_inits_range": (3, 5),
             "hide_offset": (-4.0, 0.0, -1.0),
             "objects_cfg": SceneEntityCfg("items"),
-            "guaranteed_ids": [ITEM_TARGET_ID]
+            # "guaranteed_ids": [ITEM_TARGET_ID]
         },
     )
 
@@ -193,7 +193,8 @@ class PackItemsEnvCfg(RobotGPTEnvCfg):
     terminations: PackItemsTerminationsCfg = PackItemsTerminationsCfg()
 
     # Prompt for the openpi policy.
-    prompt: str = f"Pick up the {ITEMS_DESCRIPTIONS[ITEM_TARGET_ID]} and drop it in the bin"
+    prompt: str = "Pick up the items on the table and drop them in the bin, one by one"
+    # prompt: str = f"Pick up the {ITEMS_DESCRIPTIONS[ITEM_TARGET_ID]} and drop it in the bin"
 
     def __post_init__(self):
         """Post initialization."""

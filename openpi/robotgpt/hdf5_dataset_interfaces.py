@@ -20,8 +20,8 @@ from robotgpt.hdf5_interfaces.franka_dual_arm_hdf5_interfaces import (
 HDF5_DATASET_INTERFACE_FCTS = {
     "franka_single_arm" : {"data_dim" : get_data_dimensions_franka_single_arm,
                            "process_hdf5" : process_hdf5_frame_franka_single_arm},
-    "franka_dual_arm" : {"obs" : get_data_dimensions_franka_dual_arm,
-                         "act" : process_hdf5_frame_franka_dual_arm},
+    "franka_dual_arm" : {"data_dim" : get_data_dimensions_franka_dual_arm,
+                         "process_hdf5" : process_hdf5_frame_franka_dual_arm},
 }
 
 def get_hdf5_dataset_interface_fcts(robot_type: str):

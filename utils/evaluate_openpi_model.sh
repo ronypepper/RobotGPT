@@ -14,6 +14,7 @@ MAX_DURATION=0
 ANNOTATE=0
 RECORD_TABLE=0
 RECORD_WRISTS=0
+RECORD_SCENE=0
 SHOW_VISUALIZATION=0
 VERBOSE=0
 
@@ -76,6 +77,10 @@ while [[ $# -gt 0 ]]; do
             RECORD_WRISTS=1
             shift 1
             ;;
+        --record_scene)
+            RECORD_SCENE=1
+            shift 1
+            ;;
         --viz)
             SHOW_VISUALIZATION=1
             shift 1
@@ -101,6 +106,7 @@ Optional:
   --annotate        Create an annotations.yaml file with success/fail and episode length information. Requires an environment that defines success termination terms.
   --record_table    Record videos of the table camera observations.
   --record_wrists   Record videos of the wrist camera observations.
+  --record_scene    Record videos of the scene from an external viewpoint.
   --verbose         Print logs and error messages
   --viz             Show visualization (kit)
   -h, --help        Show this help message
@@ -240,6 +246,9 @@ if [[ "$RECORD_TABLE" -eq 1 ]]; then
 fi
 if [[ "$RECORD_WRISTS" -eq 1 ]]; then
     OUTPUT_FLAGS+=" --record_wrists"
+fi
+if [[ "$RECORD_SCENE" -eq 1 ]]; then
+    OUTPUT_FLAGS+=" --record_scene"
 fi
 
 # Resolve if visualization should be showed

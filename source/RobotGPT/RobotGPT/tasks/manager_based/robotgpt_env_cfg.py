@@ -220,6 +220,10 @@ class RobotGPTObservationsCfg:
 
         left_joint_pos = ObsTerm(func=mdp.joint_pos, params={"asset_cfg": SceneEntityCfg("robot")})
         right_joint_pos = ObsTerm(func=mdp.joint_pos, params={"asset_cfg": SceneEntityCfg("robot")})
+        table_img = ObsTerm(
+            func=image_converted_for_openpi, params={"sensor_cfg": SceneEntityCfg("table_cam"),
+                                                        "data_type": "rgb", "normalize": False}
+        )
         left_wrist_img = ObsTerm(
             func=image_converted_for_openpi, params={"sensor_cfg": SceneEntityCfg("left_wrist_cam"),
                                                      "data_type": "rgb", "normalize": False}

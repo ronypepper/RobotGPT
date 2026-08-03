@@ -147,14 +147,14 @@ def setup_franka_dual_arm_ik_abs_env(env_cfg: RobotGPTEnvCfg):
 
 def process_observation_for_openpi_franka_dual_arm(obs: dict, prompt: str):
     # Pi0 models are trained for gripper positions in [0.0, 1.0], with 0.0 corresponding to fully open and 1.0 corresponding to fully closed.
-    # Observations in the dataset are in [0.0, 0.04], with 0.0 corresponding to fully closed and 0.04 corresponding to fully open.
+    # Observations from the environment are in [0.0, 0.04], with 0.0 corresponding to fully closed and 0.04 corresponding to fully open.
     # Therefore we adjust the gripper observations to fit the Pi0 models' format.
     # Proprioceptive state normalization is handled on the server side.
     left_joint_pos = obs["left_joint_pos"][:8] # 7 joints + 1 gripper
-    left_joint_pos[7] = (left_joint_pos[7] - 0.04) / 0.04
+    left_joint_pos[7] = (left_joint_pos[7] - 0.04) / -0.04
 
     right_joint_pos = obs["right_joint_pos"][:8] # 7 joints + 1 gripper
-    right_joint_pos[7] = (right_joint_pos[7] - 0.04) / 0.04
+    right_joint_pos[7] = (right_joint_pos[7] - 0.04) / -0.04
 
     joint_pos = np.concatenate((left_joint_pos, right_joint_pos))
 
@@ -170,7 +170,7 @@ def process_observation_for_openpi_franka_dual_arm(obs: dict, prompt: str):
 
 def process_openpi_action_franka_dual_arm(action: np.array):
     # Pi0 models are trained for gripper positions in [0.0, 1.0], with 0.0 corresponding to fully open and 1.0 corresponding to fully closed.
-    # The environment expects gripper positions to be in [1.0, -1.0], with 1.0 corresponding to fully open and -1.0 corresponding to fully closed.
+    # The environment expects the action inputs for the gripper to be in [1.0, -1.0], with 1.0 corresponding to fully open and -1.0 corresponding to fully closed.
     # Therefore we adjust the gripper actions to fit the environment's format.
     # We also duplicate the gripper actions for the environment.
     left_gripper_action = (action[7] * -2) + 1

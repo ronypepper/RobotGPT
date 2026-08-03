@@ -196,7 +196,7 @@ python IsaacLab/scripts/tools/merge_hdf5_datasets.py \
 source env_isaaclab/bin/activate
 mkdir -p robotgpt_output/datasets/videos
 python IsaacLab/scripts/tools/hdf5_to_mp4.py --input_file robotgpt_output/datasets/hdf5/dataset.hdf5 \
---output_dir robotgpt_output/datasets/videos --input_keys table_img wrist_img \
+--output_dir robotgpt_output/datasets/videos/dataset --input_keys table_img wrist_img \
 --video_height 224 --video_width 224 --framerate 20
 ```
 

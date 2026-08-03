@@ -12,4 +12,5 @@ git pull
 
 # Copy files to openpi repository
 cd ..
+rm -rI openpi/src/robotgpt
 cp -r RobotGPT/openpi/robotgpt openpi/src

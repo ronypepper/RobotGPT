@@ -26,12 +26,14 @@ from RobotGPT.tasks.manager_based.robotgpt_env_cfg import (
     RobotGPTEventCfg,
     RobotGPTTerminationsCfg,
 )
+from RobotGPT.utils.asset_root_path import ROBOTGPT_ASSETS_PATH
 from RobotGPT.utils.mdp.object_in_container import object_in_container
 
 ##
 # Scene definition
 ##
 
+# CUBE_WIDTH = 0.04700442  # meters
 
 @configclass
 class PlaceCubeInBinSceneCfg(RobotGPTBaseSceneCfg):
@@ -42,8 +44,12 @@ class PlaceCubeInBinSceneCfg(RobotGPTBaseSceneCfg):
         prim_path="{ENV_REGEX_NS}/cube",
         init_state=RigidObjectCfg.InitialStateCfg(pos=(0.5, 0.25, 0.05), rot=(0, 0, 0, 1)),
         spawn=UsdFileCfg(
-            usd_path=f"{ISAAC_NUCLEUS_DIR}/Props/Blocks/red_block.usd",
-            scale=(1.5, 1.5, 1.5),
+            usd_path=f"{ISAAC_NUCLEUS_DIR}/Props/Blocks/blue_block.usd",
+            # usd_path=f"{ROBOTGPT_ASSETS_PATH}/google_scanned_objects/usd_conversions/Nestle_Nips_Hard_Candy_Peanut_Butter/model/model.usda",
+            # scale=(0.8 * 0.04700442 / 0.088507, 2.2 * 0.04700442 / 0.042404, 1.2 * 0.04700442 / 0.153338),
+            scale=(1.2, 1.2, 1.2),
+            # scale=(0.088507, 0.042404, 0.153338),
+            # scale=(0.04700442, 0.04700442, 0.04700442),
             rigid_props=RigidBodyPropertiesCfg(
                 solver_position_iteration_count=16,
                 solver_velocity_iteration_count=1,
@@ -96,7 +102,8 @@ class PlaceCubeInBinEventCfg(RobotGPTEventCfg):
         func=mdp.reset_root_state_uniform,
         mode="reset",
         params={
-            "pose_range": {"x": (-0.15, 0.15), "y": (-0.2, 0.1), "yaw": (-3.14, 3.14)},
+            # "pose_range": {"x": (-0.15, 0.15), "y": (-0.2, 0.1), "yaw": (-3.14, 3.14)},
+            "pose_range": {"x": (-0.15, 0.15), "y": (-0.2, 0.1), "yaw": (-3.14, 3.14), "roll": (-3.14, 3.14), "pitch": (-3.14, 3.14)},
             "velocity_range": {},
             "asset_cfg": SceneEntityCfg("cube"),
         },
@@ -107,14 +114,14 @@ class PlaceCubeInBinEventCfg(RobotGPTEventCfg):
 class PlaceCubeInBinTerminationsCfg(RobotGPTTerminationsCfg):
     """Termination terms for the MDP."""
 
-    success = DoneTerm(func=object_in_container, params={
-            "object_cfg": SceneEntityCfg("cube"),
-            "container_cfg": SceneEntityCfg("bin"),
-            "container_halfsize_x": 9.971924 / 100,
-            "container_halfsize_y": 14.951359 / 100,
-            "container_halfsize_z": 13.640263 / 2 / 100,
-        }
-    )
+    # success = DoneTerm(func=object_in_container, params={
+    #         "object_cfg": SceneEntityCfg("cube"),
+    #         "container_cfg": SceneEntityCfg("bin"),
+    #         "container_halfsize_x": 9.971924 / 100,
+    #         "container_halfsize_y": 14.951359 / 100,
+    #         "container_halfsize_z": 13.640263 / 2 / 100,
+    #     }
+    # )
 
 
 ##
@@ -134,7 +141,7 @@ class PlaceCubeInBinEnvCfg(RobotGPTEnvCfg):
     terminations: PlaceCubeInBinTerminationsCfg = PlaceCubeInBinTerminationsCfg()
 
     # Prompt for the openpi policy.
-    prompt: str = "Pick up the red cube and drop it in the bin"
+    prompt: str = "Pick up the blue cube and drop it in the bin"
 
     def __post_init__(self):
         """Post initialization."""
