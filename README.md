@@ -14,6 +14,10 @@ The following features are in progress and will be added soon:
 - Set up locomanipulation tasks
 - Collect and convert demonstrations  -->
 
+
+https://github.com/user-attachments/assets/b49c3c70-eadf-4791-8836-1e010beed735
+
+
 # Installation
 
 The installation and later usage instructions assume you perform the install steps below within a common root folder, i.e. you should end up with a folder structure like this (root folder would be "RobotLearning" here):
