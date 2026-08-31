@@ -1,5 +1,19 @@
 # RobotGPT
 
+This repository is part of a project to investigate the generalization abilities of the open-source π₀.₅ VLA model to new robot embodiments.
+
+Currently, it contains code infrastructure necessary to conduct demonstration collection, dataset conversion, training and evaluation of the π₀.₅ model in simulation with Isaac Lab for various tasks on a Franka Panda robot. Demonstration collection is supported through a VR headset with tracked controllers via CloudXR. Output artifacts are clearly structured to support extensive testing on different tasks and instructions are provided to add further robot embodiments and tasks.
+
+The following features are in progress and will be added soon:
+- Support for Unitree G1
+- More tasks
+- Demonstration collection and evaluation on real robots via ROS1/2 and the Meta Quest 3's mixed-reality passthrough
+- A report of project findings will also be added
+<!-- It contains code infrastructure necessary to conduct demonstration collection, training and evaluation of the π₀.₅ model both in simulation with Isaac Lab and on real robots via ROS. -->
+<!-- Supported robots are the Franka Panda and the Unitree G1. Demonstration collection
+- Set up locomanipulation tasks
+- Collect and convert demonstrations  -->
+
 # Installation
 
 The installation and later usage instructions assume you perform the install steps below within a common root folder, i.e. you should end up with a folder structure like this (root folder would be "RobotLearning" here):
