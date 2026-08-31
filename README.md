@@ -14,6 +14,7 @@ The following features are in progress and will be added soon:
 - Set up locomanipulation tasks
 - Collect and convert demonstrations  -->
 
+Example video of a finetuned deployment of π₀.₅ on the Franka Panda:
 
 https://github.com/user-attachments/assets/b49c3c70-eadf-4791-8836-1e010beed735
 
