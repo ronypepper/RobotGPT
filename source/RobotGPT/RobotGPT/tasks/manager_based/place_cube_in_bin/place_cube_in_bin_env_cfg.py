@@ -45,9 +45,10 @@ class PlaceCubeInBinSceneCfg(RobotGPTBaseSceneCfg):
         init_state=RigidObjectCfg.InitialStateCfg(pos=(0.5, 0.25, 0.05), rot=(0, 0, 0, 1)),
         spawn=UsdFileCfg(
             usd_path=f"{ISAAC_NUCLEUS_DIR}/Props/Blocks/blue_block.usd",
+            scale=(1.5, 1.5, 1.5),
             # usd_path=f"{ROBOTGPT_ASSETS_PATH}/google_scanned_objects/usd_conversions/Nestle_Nips_Hard_Candy_Peanut_Butter/model/model.usda",
             # scale=(0.8 * 0.04700442 / 0.088507, 2.2 * 0.04700442 / 0.042404, 1.2 * 0.04700442 / 0.153338),
-            scale=(1.2, 1.2, 1.2),
+            # scale=(1.2, 1.2, 1.2),
             # scale=(0.088507, 0.042404, 0.153338),
             # scale=(0.04700442, 0.04700442, 0.04700442),
             rigid_props=RigidBodyPropertiesCfg(

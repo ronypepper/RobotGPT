@@ -1,9 +1,14 @@
-# Based on code from the Isaac Lab project:
+# Based in part on code from the Isaac Lab project:
 # https://github.com/isaac-sim/IsaacLab
 #
-# Original work:
+# Original Isaac Lab work:
 # Copyright (c) 2022-2026, The Isaac Lab Project Developers (https://github.com/isaac-sim/IsaacLab/blob/main/CONTRIBUTORS.md).
 # All rights reserved.
+# Licensed under the BSD-3-Clause License.
+#
+# Portions of this file are derived from code in the openpi project:
+# https://github.com/Physical-Intelligence/openpi
+# Licensed under the Apache License, Version 2.0.
 #
 # Modifications:
 # Copyright (c) 2026 ronypepper.

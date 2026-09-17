@@ -16,11 +16,8 @@ from isaaclab.assets import RigidObjectCfg, RigidObjectCollectionCfg
 from isaaclab.assets.asset_base_cfg import AssetBaseCfg
 from isaaclab.managers import EventTermCfg as EventTerm
 from isaaclab.managers import SceneEntityCfg
-from isaaclab.managers import TerminationTermCfg as DoneTerm
-from isaaclab.sim.schemas import CollisionPropertiesCfg
 from isaaclab.sim.schemas.schemas_cfg import RigidBodyPropertiesCfg
 from isaaclab.utils import configclass
-from isaaclab.utils.assets import ISAAC_NUCLEUS_DIR
 
 from RobotGPT.tasks.manager_based.robotgpt_env_cfg import (
     RobotGPTBaseSceneCfg,
@@ -28,7 +25,6 @@ from RobotGPT.tasks.manager_based.robotgpt_env_cfg import (
     RobotGPTEventCfg,
     RobotGPTTerminationsCfg,
 )
-from RobotGPT.utils.mdp.object_in_container import object_in_container
 from RobotGPT.utils.mdp.reset_multiple_objects_randomly import reset_multiple_objects_randomly
 
 ##

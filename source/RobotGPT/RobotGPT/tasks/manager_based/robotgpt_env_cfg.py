@@ -19,8 +19,6 @@ Derivative configurations define specific task props, robots and optionally task
 """
 from dataclasses import MISSING
 
-# from isaaclab_newton.physics import MJWarpSolverCfg, NewtonCfg
-# from isaaclab_newton.renderers import NewtonWarpRendererCfg
 from isaaclab_physx.physics import PhysxCfg
 
 import isaaclab.envs.mdp as mdp
@@ -32,6 +30,10 @@ from isaaclab.managers import ObservationGroupCfg as ObsGroup
 from isaaclab.managers import ObservationTermCfg as ObsTerm
 from isaaclab.managers import SceneEntityCfg
 from isaaclab.managers import TerminationTermCfg as DoneTerm
+
+# from isaaclab_newton.physics import MJWarpSolverCfg, NewtonCfg
+# from isaaclab_newton.renderers import NewtonWarpRendererCfg
+from isaaclab.managers.manager_term_cfg import ActionTermCfg
 from isaaclab.scene import InteractiveSceneCfg
 from isaaclab.sensors import CameraCfg
 from isaaclab.sim.schemas import CollisionPropertiesCfg
@@ -39,7 +41,6 @@ from isaaclab.sim.spawners.from_files.from_files_cfg import UsdFileCfg
 from isaaclab.utils import configclass
 from isaaclab.utils.assets import ISAAC_NUCLEUS_DIR, NVIDIA_NUCLEUS_DIR
 
-from RobotGPT.utils.mdp.env_step_differential_ik_action import EnvStepDifferentialInverseKinematicsActionCfg
 from RobotGPT.utils.mdp.image_converted_for_openpi import image_converted_for_openpi
 from RobotGPT.utils.mdp.randomize_utils import randomize_scene_lighting_domelight
 
@@ -184,12 +185,12 @@ class RobotGPTActionsCfg:
     """Action specifications for the MDP."""
 
     # will be set by agent env cfg
-    arm_action: mdp.JointPositionActionCfg | EnvStepDifferentialInverseKinematicsActionCfg = MISSING
-    gripper_action: mdp.JointPositionActionCfg | mdp.BinaryJointPositionActionCfg = MISSING
+    arm_action: ActionTermCfg = MISSING
+    gripper_action: ActionTermCfg = MISSING
 
     # second arm actions (used by bimanual franka setup)
-    arm_action_2: mdp.JointPositionActionCfg | EnvStepDifferentialInverseKinematicsActionCfg | None = None
-    gripper_action_2: mdp.JointPositionActionCfg | mdp.BinaryJointPositionActionCfg | None = None
+    arm_action_2: ActionTermCfg | None = None
+    gripper_action_2: ActionTermCfg | None = None
 
 
 @configclass

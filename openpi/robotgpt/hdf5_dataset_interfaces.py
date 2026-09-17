@@ -14,6 +14,10 @@ from robotgpt.hdf5_interfaces.franka_dual_arm_hdf5_interfaces import (
     get_data_dimensions_franka_dual_arm,
     process_hdf5_frame_franka_dual_arm
 )
+from robotgpt.hdf5_interfaces.g1_inspire_hdf5_interfaces import (
+    get_data_dimensions_g1_inspire,
+    process_hdf5_frame_g1_inspire
+)
 
 
 # HDF5 dataset interface functions for implemented robot types
@@ -22,6 +26,8 @@ HDF5_DATASET_INTERFACE_FCTS = {
                            "process_hdf5" : process_hdf5_frame_franka_single_arm},
     "franka_dual_arm" : {"data_dim" : get_data_dimensions_franka_dual_arm,
                          "process_hdf5" : process_hdf5_frame_franka_dual_arm},
+    "g1_inspire" : {"data_dim" : get_data_dimensions_g1_inspire,
+                    "process_hdf5" : process_hdf5_frame_g1_inspire},
 }
 
 def get_hdf5_dataset_interface_fcts(robot_type: str):
