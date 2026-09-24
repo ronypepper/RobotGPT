@@ -35,14 +35,15 @@ def process_hdf5_frame_g1_inspire(demo: h5py.Group, step: int) -> dict:
     right_thumb_pitch = np.clip(demo["obs"]["right_joint_pos"][step][16], 0.0, 0.26) / 0.26
     right_gripper_pos = np.clip((np.sum(right_fingers_pitch) + right_thumb_pitch) / 5, 0.0, 1.0)
 
-    observations = np.concatenate((left_joint_pos, (left_gripper_pos, ), right_joint_pos, (right_gripper_pos, )))
+    observations = np.concatenate((left_joint_pos, (left_gripper_pos, ), right_joint_pos, (right_gripper_pos, )),
+                                  dtype=np.float32)
 
     left_joint_pos_actions = demo["processed_actions"][step][:7]
     left_gripper_action = (demo["actions"][step][14] - 1.0) * -0.5
     right_joint_pos_actions = demo["processed_actions"][step][7:14]
     right_gripper_action = (demo["actions"][step][15] - 1.0) * -0.5
     actions = np.concatenate((left_joint_pos_actions, (left_gripper_action, ),
-                              right_joint_pos_actions, (right_gripper_action, )))
+                              right_joint_pos_actions, (right_gripper_action, )), dtype=np.float32)
 
     return {
         "table_img": demo["obs"]["table_img"][step],

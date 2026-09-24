@@ -389,7 +389,8 @@ def process_observation_for_openpi_g1_inspire(obs: dict, prompt: str):
     right_thumb_pitch = np.clip(obs["right_joint_pos"][16], 0.0, 0.26) / 0.26
     right_gripper_pos = np.clip((np.sum(right_fingers_pitch) + right_thumb_pitch) / 5, 0.0, 1.0)
 
-    joint_pos = np.concatenate((left_joint_pos, (left_gripper_pos, ), right_joint_pos, (right_gripper_pos, )))
+    joint_pos = np.concatenate((left_joint_pos, (left_gripper_pos, ), right_joint_pos, (right_gripper_pos, )),
+                               dtype=np.float32)
 
     policy_server_obs = {
         "observation/table_img": obs["table_img"],
