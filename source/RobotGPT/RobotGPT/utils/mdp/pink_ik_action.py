@@ -79,7 +79,7 @@ class PinkInverseKinematicsArmOnlyAction(ActionTerm):
         self._isaaclab_controlled_joint_ids, self._isaaclab_controlled_joint_names = self._asset.find_joints(
             self.cfg.pink_controlled_joint_names, preserve_order=self.cfg.preserve_order
         )
-        print("NAMESSSSSSSSSSS: ", self._isaaclab_controlled_joint_names)
+
         self.cfg.controller.joint_names = self._isaaclab_controlled_joint_names
         self._isaaclab_all_joint_ids = list(range(len(self._asset.data.joint_names)))
         self.cfg.controller.all_joint_names = self._asset.data.joint_names

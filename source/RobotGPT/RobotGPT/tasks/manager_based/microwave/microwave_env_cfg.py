@@ -11,6 +11,7 @@
 # SPDX-License-Identifier: BSD-3-Clause
 
 from isaaclab.assets.articulation.articulation_cfg import ArticulationCfg
+from isaaclab.assets.asset_base_cfg import AssetBaseCfg
 import isaaclab.envs.mdp as mdp
 from isaaclab.assets import RigidObjectCfg
 from isaaclab.managers import EventTermCfg as EventTerm
@@ -37,29 +38,29 @@ class MicrowaveSceneCfg(RobotGPTBaseSceneCfg):
     """Scene specification."""
 
     # props
-    mug = RigidObjectCfg(
-        prim_path="{ENV_REGEX_NS}/mug",
-        init_state=RigidObjectCfg.InitialStateCfg(pos=(0.2, 0.0, 0.05), rot=(0, 0, 0, 1)),
-        spawn=MjcfFileCfg(
-            asset_path=f"{ROBOTGPT_ASSETS_PATH}/google_scanned_objects/mujoco_scanned_objects/models/Threshold_Porcelain_Coffee_Mug_All_Over_Bead_White/model.xml",
-            usd_dir=f"{ROBOTGPT_ASSETS_PATH}/google_scanned_objects/usd_conversions/Threshold_Porcelain_Coffee_Mug_All_Over_Bead_White",
-            scale=(0.8, 0.8, 0.8),
-            rigid_props=RigidBodyPropertiesCfg(
-                solver_position_iteration_count=16,
-                solver_velocity_iteration_count=1,
-                max_angular_velocity=1000.0,
-                max_linear_velocity=1000.0,
-                max_depenetration_velocity=5.0,
-                disable_gravity=False,
-            ),
-        ),
-    )
+    # mug = RigidObjectCfg(
+    #     prim_path="{ENV_REGEX_NS}/mug",
+    #     init_state=RigidObjectCfg.InitialStateCfg(pos=(0.45, -0.2, 0.01), rot=(0, 0, 0, 1)),
+    #     spawn=MjcfFileCfg(
+    #         asset_path=f"{ROBOTGPT_ASSETS_PATH}/google_scanned_objects/mujoco_scanned_objects/models/Threshold_Porcelain_Coffee_Mug_All_Over_Bead_White/model.xml",
+    #         usd_dir=f"{ROBOTGPT_ASSETS_PATH}/google_scanned_objects/usd_conversions/Threshold_Porcelain_Coffee_Mug_All_Over_Bead_White",
+    #         scale=(0.8, 0.8, 0.8),
+    #         rigid_props=RigidBodyPropertiesCfg(
+    #             solver_position_iteration_count=16,
+    #             solver_velocity_iteration_count=1,
+    #             max_angular_velocity=1000.0,
+    #             max_linear_velocity=1000.0,
+    #             max_depenetration_velocity=5.0,
+    #             disable_gravity=False,
+    #         ),
+    #     ),
+    # )
 
-    microwave = ArticulationCfg(
+    microwave = AssetBaseCfg(
         prim_path="{ENV_REGEX_NS}/microwave",
-        init_state=ArticulationCfg.InitialStateCfg(pos=(0.5, 0.0, 0.2619372), rot=(0, 0, 0, 1)),
+        init_state=ArticulationCfg.InitialStateCfg(pos=(0.75, 0.0, 0.1619372), rot=(0, 0, -0.707, 0.707)),
         spawn=UsdFileCfg(
-            usd_path=f"{ROBOTGPT_ASSETS_PATH}/Lightwheel_Kitchen/Collected_KitchenRoom/Microwave017/Microwave_articulated.usd",
+            usd_path=f"{ROBOTGPT_ASSETS_PATH}/Lightwheel_Kitchen/Collected_KitchenRoom/Microwave017/Microwave017.usd",
             scale=(1.0, 1.0, 1.0),
             rigid_props=RigidBodyPropertiesCfg(
                 solver_position_iteration_count=16,
@@ -76,7 +77,6 @@ class MicrowaveSceneCfg(RobotGPTBaseSceneCfg):
                 solver_velocity_iteration_count=4,
             ),
         ),
-        actuators={}
     )
 
 
@@ -94,20 +94,9 @@ class MicrowaveEventCfg(RobotGPTEventCfg):
     #     func=mdp.reset_root_state_uniform,
     #     mode="reset",
     #     params={
-    #         "pose_range": {"x": (-0.15, 0.15), "y": (-0.1, 0.2), "yaw": (-3.14, 3.14)},
+    #         "pose_range": {"x": (-0.01, 0.01), "y": (-0.01, 0.01), "yaw": (-3.14, 3.14)},
     #         "velocity_range": {},
     #         "asset_cfg": SceneEntityCfg("mug"),
-    #     },
-    # )
-
-    # randomize_microwave_position = EventTerm(
-    #     func=mdp.reset_root_state_uniform,
-    #     mode="reset",
-    #     params={
-    #         # "pose_range": {"x": (-0.15, 0.15), "y": (-0.2, 0.1), "yaw": (-3.14, 3.14)},
-    #         "pose_range": {"x": (-0.15, 0.15), "y": (-0.2, 0.1), "yaw": (-3.14, 3.14), "roll": (-3.14, 3.14), "pitch": (-3.14, 3.14)},
-    #         "velocity_range": {},
-    #         "asset_cfg": SceneEntityCfg("microwave"),
     #     },
     # )
 
@@ -136,7 +125,8 @@ class MicrowaveEnvCfg(RobotGPTEnvCfg):
     terminations: MicrowaveTerminationsCfg = MicrowaveTerminationsCfg()
 
     # Prompt for the openpi policy.
-    prompt: str = "Pick up the mug and open the microwave door. Then place the mug in the microwave and close the microwave door again"
+    prompt: str = "Open the microwave door with your right hand, then close the door again with your left hand"
+    # prompt: str = "Pick up the mug and open the microwave door. Then place the mug in the microwave and close the microwave door again"
 
     def __post_init__(self):
         """Post initialization."""
