@@ -34,65 +34,60 @@ from .mdp.reset_cup_with_nuts import reset_cup_with_nuts
 # Scene definition
 ##
 
-SOURCE_CUP_POSITION = (0.5, 0.15, 0.02)
+BOTTLE_POSITION = (0.45, 0.15, 0.02)
 
 NUT_OFFSETS = [
-    (-0.005, 0.005, 0.005),
-    (-0.005, -0.005, 0.005),
-    (0.005, -0.005, 0.005),
-    (0.005, 0.005, 0.005),
-    (-0.005, 0.005, 0.015),
-    (-0.005, -0.005, 0.015),
-    (0.005, -0.005, 0.015),
-    (0.005, 0.005, 0.015),
-    (-0.005, 0.005, 0.025),
-    (-0.005, -0.005, 0.025),
-    (0.005, -0.005, 0.025),
-    (0.005, 0.005, 0.025),
+    (0.0, 0.0, 0.005),
+    (0.0, 0.0, 0.015),
+    (0.0, 0.0, 0.025),
+    (0.0, 0.0, 0.035),
+    (0.0, 0.0, 0.045),
+    (0.0, 0.0, 0.055),
 ]
+# NUT_OFFSETS = [
+#     (-0.005, 0.005, 0.005),
+#     (-0.005, -0.005, 0.005),
+#     (0.005, -0.005, 0.005),
+#     (0.005, 0.005, 0.005),
+#     (-0.005, 0.005, 0.015),
+#     (-0.005, -0.005, 0.015),
+#     (0.005, -0.005, 0.015),
+#     (0.005, 0.005, 0.015),
+#     (-0.005, 0.005, 0.025),
+#     (-0.005, -0.005, 0.025),
+#     (0.005, -0.005, 0.025),
+#     (0.005, 0.005, 0.025),
+# ]
 
-NUT_POSITIONS = [(offset[0] + SOURCE_CUP_POSITION[0],
-                  offset[1] + SOURCE_CUP_POSITION[1],
-                  offset[2] + SOURCE_CUP_POSITION[2]) for offset in NUT_OFFSETS]
+NUT_POSITIONS = [(offset[0] + BOTTLE_POSITION[0],
+                  offset[1] + BOTTLE_POSITION[1],
+                  offset[2] + BOTTLE_POSITION[2]) for offset in NUT_OFFSETS]
 
 @configclass
 class PourNutsSceneCfg(RobotGPTBaseSceneCfg):
     """Scene specification."""
 
     # props
-    source_cup = RigidObjectCfg(
-        prim_path="{ENV_REGEX_NS}/source_cup",
-        init_state=RigidObjectCfg.InitialStateCfg(pos=SOURCE_CUP_POSITION, rot=(0, 0, 0, 1)),
+    bottle = RigidObjectCfg(
+        prim_path="{ENV_REGEX_NS}/bottle",
+        init_state=RigidObjectCfg.InitialStateCfg(pos=BOTTLE_POSITION, rot=(0, 0, 0, 1)),
         spawn=UsdFileCfg(
             usd_path=f"{ISAACLAB_NUCLEUS_DIR}/Mimic/nut_pour_task/nut_pour_assets/sorting_bowl_yellow.usd",
-            scale=(0.7, 0.7, 2.0),
-            rigid_props=RigidBodyPropertiesCfg(
-                solver_position_iteration_count=16,
-                solver_velocity_iteration_count=1,
-                max_angular_velocity=1000.0,
-                max_linear_velocity=1000.0,
-                max_depenetration_velocity=5.0,
-                disable_gravity=False,
-            ),
+            scale=(0.5, 0.5, 2.5),
+            rigid_props=sim_utils.RigidBodyPropertiesCfg(),
+            collision_props=sim_utils.CollisionPropertiesCfg(contact_offset=0.005),
             visual_material=sim_utils.GlassMdlCfg(),
         ),
     )
 
-    target_cup = RigidObjectCfg(
-        prim_path="{ENV_REGEX_NS}/target_cup",
-        init_state=RigidObjectCfg.InitialStateCfg(pos=(0.5, -0.15, 0.02), rot=(0, 0, 0, 1)),
+    bowl = RigidObjectCfg(
+        prim_path="{ENV_REGEX_NS}/bowl",
+        init_state=RigidObjectCfg.InitialStateCfg(pos=(0.45, -0.15, 0.02), rot=(0, 0, 0, 1)),
         spawn=UsdFileCfg(
             usd_path=f"{ISAACLAB_NUCLEUS_DIR}/Mimic/nut_pour_task/nut_pour_assets/sorting_bowl_yellow.usd",
-            scale=(0.7, 0.7, 2.0),
-            rigid_props=RigidBodyPropertiesCfg(
-                solver_position_iteration_count=16,
-                solver_velocity_iteration_count=1,
-                max_angular_velocity=1000.0,
-                max_linear_velocity=1000.0,
-                max_depenetration_velocity=5.0,
-                disable_gravity=False,
-            ),
-            visual_material=sim_utils.GlassMdlCfg(),
+            scale=(2.0, 2.0, 1.5),
+            rigid_props=sim_utils.RigidBodyPropertiesCfg(),
+            collision_props=sim_utils.CollisionPropertiesCfg(contact_offset=0.005),
         ),
     )
 
@@ -122,25 +117,25 @@ class PourNutsSceneCfg(RobotGPTBaseSceneCfg):
 class PourNutsEventCfg(RobotGPTEventCfg):
     """Configuration for events."""
 
-    randomize_cup_with_nuts_poses = EventTerm(
+    randomize_glass_with_nuts_poses = EventTerm(
         func=reset_cup_with_nuts,
         mode="reset",
         params={
-            "cup_pose_range": {"x": (-0.05, 0.1), "y": (-0.05, 0.05)},
-            "nuts_pose_range": {"x": (-0.005, 0.005), "y": (-0.005, 0.005),
+            "cup_pose_range": {"x": (-0.05, 0.05), "y": (-0.05, 0.05)},
+            "nuts_pose_range": {"x": (-0.003, 0.003), "y": (-0.003, 0.003),
                                 "yaw": (-3.14, 3.14), "roll": (-3.14, 3.14), "pitch": (-3.14, 3.14)},
-            "cup_cfg": SceneEntityCfg("source_cup"),
+            "cup_cfg": SceneEntityCfg("bottle"),
             "nuts_cfg": SceneEntityCfg("nuts"),
         },
     )
 
-    randomize_target_cup_position = EventTerm(
+    randomize_bowl_position = EventTerm(
         func=mdp.reset_root_state_uniform,
         mode="reset",
         params={
-            "pose_range": {"x": (-0.05, 0.1), "y": (-0.05, 0.05)},
+            "pose_range": {"x": (-0.05, 0.05), "y": (-0.05, 0.05)},
             "velocity_range": {},
-            "asset_cfg": SceneEntityCfg("target_cup"),
+            "asset_cfg": SceneEntityCfg("bowl"),
         },
     )
 
@@ -169,7 +164,7 @@ class PourNutsEnvCfg(RobotGPTEnvCfg):
     terminations: PourNutsTerminationsCfg = PourNutsTerminationsCfg()
 
     # Prompt for the openpi policy.
-    prompt: str = "Pour the nuts from one container into the other"
+    prompt: str = "Pick up the bottle and pour the nuts contained in it into the bowl"
 
     def __post_init__(self):
         """Post initialization."""

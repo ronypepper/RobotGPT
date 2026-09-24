@@ -10,7 +10,7 @@
 #
 # SPDX-License-Identifier: BSD-3-Clause
 
-# The only modification here is the correct handling of zero hand joints.
+# The only modifications here are the correct handling of zero hand joints and support for respecting the order of joint names.
 
 from __future__ import annotations
 
@@ -77,8 +77,9 @@ class PinkInverseKinematicsArmOnlyAction(ActionTerm):
         """Initialize joint IDs and names based on configuration."""
         # Resolve pink controlled joints
         self._isaaclab_controlled_joint_ids, self._isaaclab_controlled_joint_names = self._asset.find_joints(
-            self.cfg.pink_controlled_joint_names
+            self.cfg.pink_controlled_joint_names, preserve_order=self.cfg.preserve_order
         )
+        print("NAMESSSSSSSSSSS: ", self._isaaclab_controlled_joint_names)
         self.cfg.controller.joint_names = self._isaaclab_controlled_joint_names
         self._isaaclab_all_joint_ids = list(range(len(self._asset.data.joint_names)))
         self.cfg.controller.all_joint_names = self._asset.data.joint_names
@@ -398,6 +399,9 @@ class PinkInverseKinematicsArmOnlyActionCfg(ActionTermCfg):
 
     pink_controlled_joint_names: list[str] = MISSING
     """List of joint names or regular expression patterns that specify the joints controlled by pink IK."""
+
+    preserve_order: bool = False
+    """Should the order of pink_controlled_joint_namesbe respected"""
 
     hand_joint_names: list[str] = MISSING
     """List of joint names or regular expression patterns that specify the joints controlled by hand retargeting."""

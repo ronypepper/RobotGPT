@@ -56,11 +56,12 @@ G1_RIGHT_ARM_JOINTS = [s.replace(".*", "right") for s in G1_ARM_JOINTS]
 
 
 INSPIRE_JOINTS = [
+    # The order (of the first five) matters here!
     ".*_index_proximal_joint",
-    ".*_thumb_proximal_pitch_joint",
     ".*_middle_proximal_joint",
     ".*_pinky_proximal_joint",
     ".*_ring_proximal_joint",
+    ".*_thumb_proximal_pitch_joint",
     ".*_index_intermediate_joint",
     ".*_middle_intermediate_joint",
     ".*_pinky_intermediate_joint",
@@ -160,7 +161,8 @@ def setup_g1_inspire_joint_pos_env(env_cfg: RobotGPTEnvCfg):
     # Set dual arm observation group
     env_cfg.observations.setup_dual_arm_observations(left_joint_names=G1_LEFT_ARM_JOINTS + INSPIRE_LEFT_JOINTS,
                                                      right_joint_names=G1_RIGHT_ARM_JOINTS + INSPIRE_RIGHT_JOINTS,
-                                                     use_robot_2_for_right_arm=False)
+                                                     use_robot_2_for_right_arm=False,
+                                                     preserve_order=True)
 
     # Setup ee-markers
     # env_cfg.scene.initialize_ee_marker(dual_arm=True)
@@ -173,7 +175,8 @@ def setup_g1_inspire_ik_abs_env(env_cfg: RobotGPTEnvCfg):
 
     # Set inverse kinematics actions for the specific robot type
     env_cfg.actions.arm_action = PinkInverseKinematicsArmOnlyActionCfg(
-        pink_controlled_joint_names=G1_ARM_JOINTS,
+        pink_controlled_joint_names=G1_LEFT_ARM_JOINTS + G1_RIGHT_ARM_JOINTS,
+        preserve_order=True,
         hand_joint_names=[],
         target_eef_link_names={
             "left_wrist": "left_wrist_yaw_link",
@@ -185,7 +188,7 @@ def setup_g1_inspire_ik_abs_env(env_cfg: RobotGPTEnvCfg):
             articulation_name="robot",
             base_link_name="pelvis",
             num_hand_joints=0,
-            show_ik_warnings=True,
+            show_ik_warnings=False,
             fail_on_joint_limit_violation=False,
             variable_input_tasks=[
                 FrameTaskCfg(
@@ -376,17 +379,17 @@ def build_g1_inspire_teleop_pipeline():
 
 def process_observation_for_openpi_g1_inspire(obs: dict, prompt: str):
     # Pi0 models are trained for gripper positions in [0.0, 1.0], with 0.0 corresponding to fully open and 1.0 corresponding to fully closed.
-    # The environment provides observations for the finger joints (of which only five are actually actuated), which are
-    # used to compute a single gripper position in the Pi0 models' format.
+    # The environment provides observations for the finger joints (of which only the first five are actually actuated),
+    # which are used to compute a single gripper position in the Pi0 models' format.
     # Proprioceptive state normalization is handled on the server side.
     left_joint_pos = obs["left_joint_pos"][:7]
     left_fingers_pitch = np.clip(obs["left_joint_pos"][7:11], 0.0, 0.7) / 0.7
-    left_thumb_pitch = np.clip(obs["left_joint_pos"][16], 0.0, 0.26) / 0.26
+    left_thumb_pitch = np.clip(obs["left_joint_pos"][11], 0.0, 0.26) / 0.26
     left_gripper_pos = np.clip((np.sum(left_fingers_pitch) + left_thumb_pitch) / 5, 0.0, 1.0)
 
     right_joint_pos = obs["right_joint_pos"][:7]
     right_fingers_pitch = np.clip(obs["right_joint_pos"][7:11], 0.0, 0.7) / 0.7
-    right_thumb_pitch = np.clip(obs["right_joint_pos"][16], 0.0, 0.26) / 0.26
+    right_thumb_pitch = np.clip(obs["right_joint_pos"][11], 0.0, 0.26) / 0.26
     right_gripper_pos = np.clip((np.sum(right_fingers_pitch) + right_thumb_pitch) / 5, 0.0, 1.0)
 
     joint_pos = np.concatenate((left_joint_pos, (left_gripper_pos, ), right_joint_pos, (right_gripper_pos, )),

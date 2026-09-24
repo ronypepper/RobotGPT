@@ -233,11 +233,14 @@ class RobotGPTObservationsCfg:
 
     def setup_dual_arm_observations(self, left_joint_names: str | list[str] | None = None,
                                     right_joint_names: str | list[str] | None = None,
-                                    use_robot_2_for_right_arm: bool = False):
+                                    use_robot_2_for_right_arm: bool = False,
+                                    preserve_order: bool = False):
         self.policy = self.DualArmPolicyCfg()
-        self.policy.left_joint_pos.params = {"asset_cfg": SceneEntityCfg("robot", joint_names=left_joint_names)}
+        self.policy.left_joint_pos.params = {"asset_cfg": SceneEntityCfg("robot", joint_names=left_joint_names,
+                                                                         preserve_order=preserve_order)}
         self.policy.right_joint_pos.params = {
-            "asset_cfg": SceneEntityCfg("robot_2" if use_robot_2_for_right_arm else "robot", joint_names=right_joint_names)
+            "asset_cfg": SceneEntityCfg("robot_2" if use_robot_2_for_right_arm else "robot",
+                                        joint_names=right_joint_names, preserve_order=preserve_order)
         }
 
     # observation groups
