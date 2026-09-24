@@ -16,6 +16,7 @@ def get_data_dimensions_franka_dual_arm():
         "state": 16, # proprioceptive observation, i.e. joint & gripper positions
         "img_width": 224,
         "img_height": 224,
+        "is_dual_arm": True
     }
 
 

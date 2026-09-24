@@ -90,32 +90,46 @@ def main(args: Args):
         # OpenPi assumes that proprio is stored in `state` and actions in `action`
         # LeRobot assumes that dtype of image data is `image`
         dimensions = get_data_dimensions_fct()
+        features = {
+            "table_img": {
+                "dtype": "image",
+                "shape": (dimensions["img_height"], dimensions["img_width"], 3),
+                "names": ["height", "width", "channel"],
+            },
+            "state": {
+                "dtype": "float32",
+                "shape": (dimensions["state"],),
+                "names": ["state"],
+            },
+            "actions": {
+                "dtype": "float32",
+                "shape": (dimensions["actions"],),
+                "names": ["actions"],
+            },
+        }
+        if dimensions["is_dual_arm"]:
+            features["left_wrist_img"] = {
+                "dtype": "image",
+                "shape": (dimensions["img_height"], dimensions["img_width"], 3),
+                "names": ["height", "width", "channel"],
+            }
+            features["right_wrist_img"] = {
+                "dtype": "image",
+                "shape": (dimensions["img_height"], dimensions["img_width"], 3),
+                "names": ["height", "width", "channel"],
+            }
+        else:
+            features["wrist_img"] = {
+                "dtype": "image",
+                "shape": (dimensions["img_height"], dimensions["img_width"], 3),
+                "names": ["height", "width", "channel"],
+            }
+
         lerobot_dataset = LeRobotDataset.create(
             repo_id=repo_name,
             robot_type=args.robot_type,
             fps=fps,
-            features={
-                "table_img": {
-                    "dtype": "image",
-                    "shape": (dimensions["img_height"], dimensions["img_width"], 3),
-                    "names": ["height", "width", "channel"],
-                },
-                "wrist_img": {
-                    "dtype": "image",
-                    "shape": (dimensions["img_height"], dimensions["img_width"], 3),
-                    "names": ["height", "width", "channel"],
-                },
-                "state": {
-                    "dtype": "float32",
-                    "shape": (dimensions["state"],),
-                    "names": ["state"],
-                },
-                "actions": {
-                    "dtype": "float32",
-                    "shape": (dimensions["actions"],),
-                    "names": ["actions"],
-                },
-            },
+            features=features,
             image_writer_threads=10,
             image_writer_processes=5,
         )
