@@ -19,6 +19,7 @@ from RobotGPT.utils.mdp.env_step_differential_ik_action import EnvStepDifferenti
 import isaaclab.envs.mdp as mdp
 from isaaclab.controllers.differential_ik_cfg import DifferentialIKControllerCfg
 from isaaclab.devices.openxr.openxr_device import XrCfg
+from isaaclab.sensors import CameraCfg
 
 try:
     import isaacteleop  # noqa: F401  -- pipeline builders need isaacteleop at runtime
@@ -45,9 +46,6 @@ def setup_franka_dual_arm_joint_pos_env(env_cfg: RobotGPTEnvCfg):
     env_cfg.scene.robot_2 = FRANKA_PANDA_HIGH_PD_CFG.replace(prim_path="{ENV_REGEX_NS}/Robot_2")
     env_cfg.scene.robot_2.spawn.usd_path = f"{ISAACLAB_NUCLEUS_DIR}/Robots/FrankaEmika/Legacy/panda_instanceable.usd"
     env_cfg.scene.robot_2.init_state.pos = (0.0, -0.2825, 0.0)
-
-    # Intitialize right wirst camera
-    env_cfg.scene.initialize_right_wrist_camera()
 
     # Configure default pose with vertically aligned gripper orientation
     env_cfg.scene.robot.init_state.joint_pos = {
@@ -95,9 +93,27 @@ def setup_franka_dual_arm_joint_pos_env(env_cfg: RobotGPTEnvCfg):
         use_default_offset=False
     )
 
-    # Set wrist camera anchors on robot
+    # Intitialize right wirst camera
+    env_cfg.scene.initialize_right_wrist_camera()
+
+    # Adjust camera anchors and poses
+    env_cfg.scene.table_cam.prim_path = "{ENV_REGEX_NS}/table_cam"
+    env_cfg.scene.table_cam.offset = CameraCfg.OffsetCfg(
+        pos=(-0.03890996200355793, 0.9736847657158553, 0.8084830725058005),
+        rot=(0.09143, -0.47766, -0.83945, 0.24249), convention="opengl"
+    )
+
     env_cfg.scene.left_wrist_cam.prim_path = "{ENV_REGEX_NS}/Robot/panda_hand/left_wrist_cam"
+    env_cfg.scene.left_wrist_cam.offset = CameraCfg.OffsetCfg(
+        pos=(0.1009906081856474, -2.2170453280873081e-7, 0.005195286872436311),
+        rot=(0.68618, 0.68618, 0.17074, 0.17074), convention="opengl"
+    )
+
     env_cfg.scene.right_wrist_cam.prim_path = "{ENV_REGEX_NS}/Robot_2/panda_hand/right_wrist_cam"
+    env_cfg.scene.right_wrist_cam.offset = CameraCfg.OffsetCfg(
+        pos=(0.1009906081856474, -2.2170453280873081e-7, 0.005195286872436311),
+        rot=(0.68618, 0.68618, 0.17074, 0.17074), convention="opengl"
+    )
 
     # Set dual arm observation group
     env_cfg.observations.setup_dual_arm_observations(use_robot_2_for_right_arm=True)
@@ -138,7 +154,10 @@ def setup_franka_dual_arm_ik_abs_env(env_cfg: RobotGPTEnvCfg):
     )
     if _TELEOP_AVAILABLE:
         env_cfg.isaac_teleop = IsaacTeleopCfg(
-            pipeline_builder=lambda: build_teleop_pipeline(dual_arm=True)[0],
+            pipeline_builder=lambda: build_teleop_pipeline(dual_arm=True,
+                                                           duplicate_gripper=True,
+                                                           egocentric_view=False,
+                                                           offset_rot=(45.0, 0.0, 80.0))[0],
             # retargeters_to_tune=lambda: build_teleop_pipeline(dual_arm=True)[1],
             sim_device=env_cfg.sim.device,
             xr_cfg=env_cfg.xr,

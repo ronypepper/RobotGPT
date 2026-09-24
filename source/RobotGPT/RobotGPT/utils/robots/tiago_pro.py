@@ -158,7 +158,9 @@ def setup_tiago_pro_ik_abs_env(env_cfg: RobotGPTEnvCfg, dual_arm: bool):
     )
     if _TELEOP_AVAILABLE:
         env_cfg.isaac_teleop = IsaacTeleopCfg(
-            pipeline_builder=lambda: build_teleop_pipeline(dual_arm=dual_arm)[0],
+            pipeline_builder=lambda: build_teleop_pipeline(dual_arm=dual_arm,
+                                                           duplicate_gripper=True,
+                                                           egocentric_view=False)[0],
             # retargeters_to_tune=lambda: build_teleop_pipeline(dual_arm=dual_arm)[1],
             sim_device=env_cfg.sim.device,
             xr_cfg=env_cfg.xr,

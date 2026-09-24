@@ -60,15 +60,17 @@ def reset_cup_with_nuts(
     nuts_default_vels = nuts.data.default_body_vel.torch[env_ids].clone()
 
     # compute randomized nut poses
+    num_nuts = nuts_default_poses.shape[1]
     range_list = [nuts_pose_range.get(key, (0.0, 0.0)) for key in ["x", "y", "z", "roll", "pitch", "yaw"]]
     ranges = torch.tensor(range_list, device=cup.device)
-    nuts_rand_samples = math_utils.sample_uniform(ranges[:, 0], ranges[:, 1], (len(env_ids), 6), device=cup.device)
+    nuts_rand_samples = math_utils.sample_uniform(ranges[:, 0], ranges[:, 1],
+                                                  (len(env_ids), num_nuts, 6), device=cup.device)
 
-    nuts_default_poses[:, 0:3] += env.scene.env_origins[env_ids] + cup_rand_samples + nuts_rand_samples[:, 0:3]
-    orientations_delta = math_utils.quat_from_euler_xyz(nuts_rand_samples[:, 3], nuts_rand_samples[:, 4],
-                                                        nuts_rand_samples[:, 5])
-    nuts_default_poses[:, 3:7] = math_utils.quat_mul(nuts_default_poses[:, 3:7], orientations_delta)
+    nuts_default_poses[:, :, 0:3] += env.scene.env_origins[env_ids] + cup_rand_samples + nuts_rand_samples[:, :, 0:3]
+    orientations_delta = math_utils.quat_from_euler_xyz(nuts_rand_samples[:, :, 3], nuts_rand_samples[:, :, 4],
+                                                        nuts_rand_samples[:, :, 5])
+    nuts_default_poses[:, :, 3:7] = math_utils.quat_mul(nuts_default_poses[:, :, 3:7], orientations_delta)
 
     # set nuts states into the physics simulation
-    cup.write_root_pose_to_sim_index(root_pose=nuts_default_poses, env_ids=env_ids)
-    cup.write_root_velocity_to_sim_index(root_velocity=nuts_default_vels, env_ids=env_ids)
+    nuts.write_body_pose_to_sim_index(body_poses=nuts_default_poses, env_ids=env_ids)
+    nuts.write_body_velocity_to_sim_index(body_velocities=nuts_default_vels, env_ids=env_ids)

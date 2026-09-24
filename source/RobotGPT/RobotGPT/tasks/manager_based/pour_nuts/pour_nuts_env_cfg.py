@@ -10,8 +10,6 @@
 #
 # SPDX-License-Identifier: BSD-3-Clause
 
-from mdp.reset_cup_with_nuts import reset_cup_with_nuts
-
 import isaaclab.envs.mdp as mdp
 import isaaclab.sim as sim_utils
 from isaaclab.assets import RigidObjectCfg
@@ -30,25 +28,27 @@ from RobotGPT.tasks.manager_based.robotgpt_env_cfg import (
     RobotGPTTerminationsCfg,
 )
 
+from .mdp.reset_cup_with_nuts import reset_cup_with_nuts
+
 ##
 # Scene definition
 ##
 
-SOURCE_CUP_POSITION = (0.5, 0.25, 0.05)
+SOURCE_CUP_POSITION = (0.5, 0.15, 0.02)
 
 NUT_OFFSETS = [
     (-0.005, 0.005, 0.005),
     (-0.005, -0.005, 0.005),
     (0.005, -0.005, 0.005),
     (0.005, 0.005, 0.005),
-    (-0.005, 0.005, 0.01),
-    (-0.005, -0.005, 0.01),
-    (0.005, -0.005, 0.01),
-    (0.005, 0.005, 0.01),
     (-0.005, 0.005, 0.015),
     (-0.005, -0.005, 0.015),
     (0.005, -0.005, 0.015),
     (0.005, 0.005, 0.015),
+    (-0.005, 0.005, 0.025),
+    (-0.005, -0.005, 0.025),
+    (0.005, -0.005, 0.025),
+    (0.005, 0.005, 0.025),
 ]
 
 NUT_POSITIONS = [(offset[0] + SOURCE_CUP_POSITION[0],
@@ -65,7 +65,7 @@ class PourNutsSceneCfg(RobotGPTBaseSceneCfg):
         init_state=RigidObjectCfg.InitialStateCfg(pos=SOURCE_CUP_POSITION, rot=(0, 0, 0, 1)),
         spawn=UsdFileCfg(
             usd_path=f"{ISAACLAB_NUCLEUS_DIR}/Mimic/nut_pour_task/nut_pour_assets/sorting_bowl_yellow.usd",
-            scale=(0.6, 0.6, 1.0),
+            scale=(0.7, 0.7, 2.0),
             rigid_props=RigidBodyPropertiesCfg(
                 solver_position_iteration_count=16,
                 solver_velocity_iteration_count=1,
@@ -74,16 +74,16 @@ class PourNutsSceneCfg(RobotGPTBaseSceneCfg):
                 max_depenetration_velocity=5.0,
                 disable_gravity=False,
             ),
-            visual_material=sim_utils.PreviewSurfaceCfg(diffuse_color=(0.8, 0.8, 0.8), opacity=0.5),
+            visual_material=sim_utils.GlassMdlCfg(),
         ),
     )
 
     target_cup = RigidObjectCfg(
         prim_path="{ENV_REGEX_NS}/target_cup",
-        init_state=RigidObjectCfg.InitialStateCfg(pos=(0.5, -0.25, 0.05), rot=(0, 0, 0, 1)),
+        init_state=RigidObjectCfg.InitialStateCfg(pos=(0.5, -0.15, 0.02), rot=(0, 0, 0, 1)),
         spawn=UsdFileCfg(
             usd_path=f"{ISAACLAB_NUCLEUS_DIR}/Mimic/nut_pour_task/nut_pour_assets/sorting_bowl_yellow.usd",
-            scale=(0.8, 0.8, 1.5),
+            scale=(0.7, 0.7, 2.0),
             rigid_props=RigidBodyPropertiesCfg(
                 solver_position_iteration_count=16,
                 solver_velocity_iteration_count=1,
@@ -92,7 +92,7 @@ class PourNutsSceneCfg(RobotGPTBaseSceneCfg):
                 max_depenetration_velocity=5.0,
                 disable_gravity=False,
             ),
-            visual_material=sim_utils.PreviewSurfaceCfg(diffuse_color=(0.9, 0.9, 0.9), opacity=0.5),
+            visual_material=sim_utils.GlassMdlCfg(),
         ),
     )
 
@@ -103,9 +103,10 @@ class PourNutsSceneCfg(RobotGPTBaseSceneCfg):
                 init_state=RigidObjectCfg.InitialStateCfg(pos=nut_position, rot=(0, 0, 0, 1)),
                 spawn=UsdFileCfg(
                     usd_path=f"{ISAACLAB_NUCLEUS_DIR}/Mimic/nut_pour_task/nut_pour_assets/factory_m16_nut_green.usd",
-                    scale=(0.5, 0.5, 0.5),
+                    scale=(0.7, 0.7, 0.7),
                     rigid_props=sim_utils.RigidBodyPropertiesCfg(),
                     collision_props=sim_utils.CollisionPropertiesCfg(contact_offset=0.005),
+                    visual_material=sim_utils.PreviewSurfaceCfg(diffuse_color=(0.3, 0.3, 0.3), metallic=1.0),
                 ),
             ) for i, nut_position in enumerate(NUT_POSITIONS)
         }
@@ -125,7 +126,7 @@ class PourNutsEventCfg(RobotGPTEventCfg):
         func=reset_cup_with_nuts,
         mode="reset",
         params={
-            "cup_pose_range": {"x": (-0.15, 0.15), "y": (-0.2, 0.1)},
+            "cup_pose_range": {"x": (-0.05, 0.1), "y": (-0.05, 0.05)},
             "nuts_pose_range": {"x": (-0.005, 0.005), "y": (-0.005, 0.005),
                                 "yaw": (-3.14, 3.14), "roll": (-3.14, 3.14), "pitch": (-3.14, 3.14)},
             "cup_cfg": SceneEntityCfg("source_cup"),
@@ -137,7 +138,7 @@ class PourNutsEventCfg(RobotGPTEventCfg):
         func=mdp.reset_root_state_uniform,
         mode="reset",
         params={
-            "pose_range": {"x": (-0.15, 0.15), "y": (-0.1, 0.2)},
+            "pose_range": {"x": (-0.05, 0.1), "y": (-0.05, 0.05)},
             "velocity_range": {},
             "asset_cfg": SceneEntityCfg("target_cup"),
         },
@@ -175,3 +176,6 @@ class PourNutsEnvCfg(RobotGPTEnvCfg):
         super().__post_init__()
         # general settings
         self.episode_length_s = 60.0
+
+        # Enable translucency for cups
+        self.sim.render.enable_translucency = True

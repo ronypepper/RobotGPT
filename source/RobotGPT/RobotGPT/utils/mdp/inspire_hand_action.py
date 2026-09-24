@@ -55,8 +55,8 @@ INSPIRE_THUMB_YAW_OFFSET = 1.3
 
 
 class InspireHandAction(ActionTerm):
-    """Action term that maps a single action value in range [0, 1] to joint position commands for the Inspire 6-DOF
-    dexterous hand."""
+    """Action term that maps a single action value in range [-1, 1] to joint position commands for the Inspire 6-DOF
+    dexterous hand, with 1.0 corresponding to the hand fully open and -1.0 corresponding to fully closed."""
 
     cfg: InspireHandActionCfg
     """The configuration of the action term."""
@@ -73,14 +73,14 @@ class InspireHandAction(ActionTerm):
             self._inspire_joint_names, preserve_order=True
         )
         self._num_joints = len(self._joint_ids)
+        assert self._num_joints == 12
 
         # create tensors for raw and processed actions
         self._raw_actions = torch.zeros(self.num_envs, self.action_dim, device=self.device)
-        self._processed_actions = torch.zeros_like(self.raw_actions)
         self._processed_actions = torch.zeros(self.num_envs, self._num_joints, device=self.device)
 
         # create tensor for joint scales
-        self._inspire_joint_scales = torch.Tensor(INSPIRE_JOINT_SCALES, device=self.device)[-1, :]
+        self._inspire_joint_scales = torch.tensor(INSPIRE_JOINT_SCALES, device=self.device)
 
     """
     Properties.
@@ -98,48 +98,13 @@ class InspireHandAction(ActionTerm):
     def processed_actions(self) -> torch.Tensor:
         return self._processed_actions
 
-    # @property
-    # def IO_descriptor(self) -> GenericActionIODescriptor:
-    #     """The IO descriptor of the action term.
-
-    #     This descriptor is used to describe the action term of the inspire hand action.
-    #     It adds the following information to the base descriptor:
-    #     - joint_names: The names of the joints.
-    #     - scale: The scale of the action term.
-    #     - offset: The offset of the action term.
-    #     - clip: The clip of the action term.
-
-    #     Returns:
-    #         The IO descriptor of the action term.
-    #     """
-    #     super().IO_descriptor
-    #     self._IO_descriptor.shape = (self.action_dim,)
-    #     self._IO_descriptor.dtype = str(self.raw_actions.dtype)
-    #     self._IO_descriptor.action_type = "JointAction"
-    #     self._IO_descriptor.joint_names = self._joint_names
-    #     self._IO_descriptor.scale = self._scale
-    #     # This seems to be always [4xNum_joints] IDK why. Need to check.
-    #     if isinstance(self._offset, torch.Tensor):
-    #         self._IO_descriptor.offset = self._offset[0].detach().cpu().numpy().tolist()
-    #     else:
-    #         self._IO_descriptor.offset = self._offset
-    #     # FIXME: This is not correct. Add list support.
-    #     if self.cfg.clip is not None:
-    #         if isinstance(self._clip, torch.Tensor):
-    #             self._IO_descriptor.clip = self._clip[0].detach().cpu().numpy().tolist()
-    #         else:
-    #             self._IO_descriptor.clip = self._clip
-    #     else:
-    #         self._IO_descriptor.clip = None
-    #     return self._IO_descriptor
-
     """
     Operations.
     """
 
     def process_actions(self, actions: torch.Tensor):
         # store the raw actions
-        self._raw_actions[:] = actions
+        self._raw_actions[:] = (actions - 1.0) * -0.5
 
         # Map raw action to inspire hand joint position actions
         self._processed_actions[:, :-1] = self._raw_actions * self._inspire_joint_scales

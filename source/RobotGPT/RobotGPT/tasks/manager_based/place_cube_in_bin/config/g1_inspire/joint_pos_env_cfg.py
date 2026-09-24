@@ -15,11 +15,15 @@ from isaaclab.utils import configclass
 from RobotGPT.tasks.manager_based.place_cube_in_bin.place_cube_in_bin_env_cfg import PlaceCubeInBinEnvCfg
 from RobotGPT.utils.robots.g1_inspire import setup_g1_inspire_joint_pos_env
 
+from .env_adjustment import adjust_env_cfg
+
 
 @configclass
 class G1InspirePlaceCubeInBinEnvCfg(PlaceCubeInBinEnvCfg):
     def __post_init__(self):
         # post init of parent
         super().__post_init__()
+
+        adjust_env_cfg(self)
 
         setup_g1_inspire_joint_pos_env(self)

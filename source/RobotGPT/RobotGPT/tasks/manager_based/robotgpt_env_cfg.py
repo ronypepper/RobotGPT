@@ -72,7 +72,7 @@ class RobotGPTBaseSceneCfg(InteractiveSceneCfg):
     def initialize_ee_marker(self, dual_arm: bool):
         self.ee_marker = AssetBaseCfg(
             prim_path=MISSING,
-            init_state=RigidObjectCfg.InitialStateCfg(pos=(0.0, 0, 0.107), rot=(0, 0, 0, 1)),
+            init_state=RigidObjectCfg.InitialStateCfg(pos=(0.0, 0, 0.0), rot=(0, 0, 0, 1)),
             spawn=UsdFileCfg(
                 usd_path=f"{ISAAC_NUCLEUS_DIR}/Props/UIElements/frame_prim.usd",
                 scale=(0.1, 0.1, 0.1),
@@ -81,7 +81,7 @@ class RobotGPTBaseSceneCfg(InteractiveSceneCfg):
         if dual_arm:
             self.ee_marker_2 = AssetBaseCfg(
                 prim_path=MISSING,
-                init_state=RigidObjectCfg.InitialStateCfg(pos=(0.0, 0, 0.107), rot=(0, 0, 0, 1)),
+                init_state=RigidObjectCfg.InitialStateCfg(pos=(0.0, 0, 0.0), rot=(0, 0, 0, 1)),
                 spawn=UsdFileCfg(
                     usd_path=f"{ISAAC_NUCLEUS_DIR}/Props/UIElements/frame_prim.usd",
                     scale=(0.1, 0.1, 0.1),
@@ -97,10 +97,6 @@ class RobotGPTBaseSceneCfg(InteractiveSceneCfg):
         data_types=["rgb"],
         spawn=sim_utils.PinholeCameraCfg(
             focal_length=2.1, focus_distance=28.0, horizontal_aperture=5.376, vertical_aperture=3.024
-        ),
-        offset=CameraCfg.OffsetCfg(
-            pos=(0.1009906081856474, -2.2170453280873081e-7, 0.005195286872436311),
-            rot=(0.68618, 0.68618, 0.17074, 0.17074), convention="opengl"
         ),
         # renderer_cfg=NewtonWarpRendererCfg(create_default_light=False, enable_shadows=True)
     )
@@ -118,26 +114,18 @@ class RobotGPTBaseSceneCfg(InteractiveSceneCfg):
             spawn=sim_utils.PinholeCameraCfg(
                 focal_length=2.1, focus_distance=28.0, horizontal_aperture=5.376, vertical_aperture=3.024
             ),
-            offset=CameraCfg.OffsetCfg(
-                pos=(0.1009906081856474, -2.2170453280873081e-7, 0.005195286872436311),
-                rot=(0.68618, 0.68618, 0.17074, 0.17074), convention="opengl"
-            ),
             # renderer_cfg=NewtonWarpRendererCfg(create_default_light=False, enable_shadows=True)
         )
 
     # Table view camera
     table_cam = CameraCfg(
-        prim_path="{ENV_REGEX_NS}/table_cam",
+        prim_path=MISSING,
         update_period=0.0,
         height=480,
         width=640,
         data_types=["rgb"],
         spawn=sim_utils.PinholeCameraCfg(
             focal_length=2.1, focus_distance=28.0, horizontal_aperture=5.376, vertical_aperture=3.024
-        ),
-        offset=CameraCfg.OffsetCfg(
-            pos=(-0.03890996200355793, 0.9736847657158553, 0.8084830725058005),
-            rot=(0.09143, -0.47766, -0.83945, 0.24249), convention="opengl"
         ),
         # renderer_cfg=NewtonWarpRendererCfg(create_default_light=False, enable_shadows=True)
     )

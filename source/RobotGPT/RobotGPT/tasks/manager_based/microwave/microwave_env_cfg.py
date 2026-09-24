@@ -10,6 +10,7 @@
 #
 # SPDX-License-Identifier: BSD-3-Clause
 
+from isaaclab.assets.articulation.articulation_cfg import ArticulationCfg
 import isaaclab.envs.mdp as mdp
 from isaaclab.assets import RigidObjectCfg
 from isaaclab.managers import EventTermCfg as EventTerm
@@ -25,6 +26,7 @@ from RobotGPT.tasks.manager_based.robotgpt_env_cfg import (
     RobotGPTTerminationsCfg,
 )
 from RobotGPT.utils.asset_root_path import ROBOTGPT_ASSETS_PATH
+from isaaclab_physx.sim.schemas.schemas_cfg import ArticulationRootPropertiesCfg
 
 ##
 # Scene definition
@@ -53,11 +55,11 @@ class MicrowaveSceneCfg(RobotGPTBaseSceneCfg):
         ),
     )
 
-    microwave = RigidObjectCfg(
+    microwave = ArticulationCfg(
         prim_path="{ENV_REGEX_NS}/microwave",
-        init_state=RigidObjectCfg.InitialStateCfg(pos=(0.5, 0.0, 0.2619372), rot=(0, 0, 0, 1)),
+        init_state=ArticulationCfg.InitialStateCfg(pos=(0.5, 0.0, 0.2619372), rot=(0, 0, 0, 1)),
         spawn=UsdFileCfg(
-            usd_path=f"{ROBOTGPT_ASSETS_PATH}/Lightwheel_Kitchen/Collected_KitchenRoom/Microwave017/Microwave017.usd",
+            usd_path=f"{ROBOTGPT_ASSETS_PATH}/Lightwheel_Kitchen/Collected_KitchenRoom/Microwave017/Microwave_articulated.usd",
             scale=(1.0, 1.0, 1.0),
             rigid_props=RigidBodyPropertiesCfg(
                 solver_position_iteration_count=16,
@@ -67,7 +69,14 @@ class MicrowaveSceneCfg(RobotGPTBaseSceneCfg):
                 max_depenetration_velocity=5.0,
                 disable_gravity=False,
             ),
+            articulation_props=ArticulationRootPropertiesCfg(
+                enabled_self_collisions=False,
+                fix_root_link=False,  # Configurable - can be set to True for fixed base
+                solver_position_iteration_count=8,
+                solver_velocity_iteration_count=4,
+            ),
         ),
+        actuators={}
     )
 
 
