@@ -40,8 +40,8 @@ def process_hdf5_frame_g1_inspire(demo: h5py.Group, step: int) -> dict:
     left_gripper_action = (demo["actions"][step][14] - 1.0) * -0.5
     right_joint_pos_actions = demo["processed_actions"][step][7:14]
     right_gripper_action = (demo["actions"][step][15] - 1.0) * -0.5
-    actions = np.concatenate((left_joint_pos_actions, left_gripper_action,
-                              right_joint_pos_actions, right_gripper_action))
+    actions = np.concatenate((left_joint_pos_actions, (left_gripper_action, ),
+                              right_joint_pos_actions, (right_gripper_action, )))
 
     return {
         "table_img": demo["obs"]["table_img"][step],
