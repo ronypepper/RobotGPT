@@ -21,18 +21,18 @@ def get_data_dimensions_g1_inspire():
 
 def process_hdf5_frame_g1_inspire(demo: h5py.Group, step: int) -> dict:
     # Pi0 models are trained for gripper positions in [0.0, 1.0], with 0.0 corresponding to fully open and 1.0 corresponding to fully closed.
-    # The environment provides observations for the proximal index and the proximal thumb pitch finger joints, which are
-    # actuated in the ranges [0.0, 0.7] and [0.0, 0.26], respectively (see inspire_hand_action.py).
+    # The environment provides observations for the finger joints (of which only five are actually actuated), which are
+    # used to compute a single gripper position in the Pi0 models' format.
     # A single gripper position in the Pi0 models' format is computed from these joints.
     left_joint_pos = demo["obs"]["left_joint_pos"][step][:7]
-    left_index_pitch = np.clip(demo["obs"]["left_joint_pos"][step][7], 0.0, 0.7) / 0.7
-    left_thumb_pitch = np.clip(demo["obs"]["left_joint_pos"][step][8], 0.0, 0.26) / 0.26
-    left_gripper_pos = (left_index_pitch + left_thumb_pitch) / 2
+    left_fingers_pitch = np.clip(demo["obs"]["left_joint_pos"][step][7:11], 0.0, 0.7) / 0.7
+    left_thumb_pitch = np.clip(demo["obs"]["left_joint_pos"][step][16], 0.0, 0.26) / 0.26
+    left_gripper_pos = np.clip((np.sum(left_fingers_pitch) + left_thumb_pitch) / 5, 0.0, 1.0)
 
     right_joint_pos = demo["obs"]["right_joint_pos"][step][:7]
-    right_index_pitch = np.clip(demo["obs"]["right_joint_pos"][step][7], 0.0, 0.7) / 0.7
-    right_thumb_pitch = np.clip(demo["obs"]["right_joint_pos"][step][8], 0.0, 0.26) / 0.26
-    right_gripper_pos = (right_index_pitch + right_thumb_pitch) / 2
+    right_fingers_pitch = np.clip(demo["obs"]["right_joint_pos"][step][7:11], 0.0, 0.7) / 0.7
+    right_thumb_pitch = np.clip(demo["obs"]["right_joint_pos"][step][16], 0.0, 0.26) / 0.26
+    right_gripper_pos = np.clip((np.sum(right_fingers_pitch) + right_thumb_pitch) / 5, 0.0, 1.0)
 
     observations = np.concatenate((left_joint_pos, (left_gripper_pos, ), right_joint_pos, (right_gripper_pos, )))
 
