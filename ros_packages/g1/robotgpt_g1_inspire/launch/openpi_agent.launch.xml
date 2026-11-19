@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<launch>
+  <arg name="table_cam_sn" default="'243722075046'" />
+  <arg name="left_wrist_cam_sn" default="'337122071131'" />
+  <arg name="right_wrist_cam_sn" default="'241122072130'" />
+
+  <arg name="prompt" default="MISSING"/>
+  <arg name="policy_server_ip" default="localhost"/>
+  <arg name="policy_server_port" default="8000"/>
+  <arg name="policy_frequency" default="20"/>
+  <arg name="open_loop_horizon" default="16"/>
+  <arg name="mode" default="g1_proprietary_controller"/>
+  <arg name="disable_left_hand" default="false" />
+  <arg name="disable_right_hand" default="false" />
+
+  <!-- Cameras -->
+  <include file="$(find-pkg-share realsense2_camera)/launch/rs_launch.py">
+    <arg name="camera_name" value="table_camera"/>
+    <arg name="camera_namespace" value=""/>
+    <arg name="rgb_camera.color_profile" value="640,480,30"/>
+    <arg name="enable_depth" value="false"/>
+    <arg name="serial_no" value="$(var table_cam_sn)"/>
+  </include>
+  <group unless="$(var disable_left_hand)">
+    <include file="$(find-pkg-share realsense2_camera)/launch/rs_launch.py">
+      <arg name="camera_name" value="left_wrist_camera"/>
+      <arg name="camera_namespace" value=""/>
+      <arg name="rgb_camera.color_profile" value="640,480,30"/>
+      <arg name="enable_depth" value="false"/>
+      <arg name="serial_no" value="$(var left_wrist_cam_sn)"/>
+    </include>
+  </group>
+  <group unless="$(var disable_right_hand)">
+    <include file="$(find-pkg-share realsense2_camera)/launch/rs_launch.py">
+      <arg name="camera_name" value="right_wrist_camera"/>
+      <arg name="camera_namespace" value=""/>
+      <arg name="rgb_camera.color_profile" value="640,480,30"/>
+      <arg name="enable_depth" value="false"/>
+      <arg name="serial_no" value="$(var right_wrist_cam_sn)"/>
+    </include>
+  </group>
+
+  <!-- Openpi client -->
+  <node name="robotgpt_openpi_agent" pkg="robotgpt_g1_inspire" exec="robotgpt_openpi_agent.launcher" output="screen">
+    <param name="prompt" value="$(var prompt)"/>
+    <param name="policy_server_ip" value="$(var policy_server_ip)"/>
+    <param name="policy_server_port" value="$(var policy_server_port)"/>
+    <param name="policy_frequency" value="$(var policy_frequency)"/>
+    <param name="open_loop_horizon" value="$(var open_loop_horizon)"/>
+    <param name="mode" value="$(var mode)"/>
+    <param name="disable_left_hand" value="$(var disable_left_hand)"/>
+    <param name="disable_right_hand" value="$(var disable_right_hand)"/>
+  </node>
+</launch>

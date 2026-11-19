@@ -1,0 +1,28 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>robotgpt_g1_inspire</name>
+  <version>0.0.0</version>
+  <description>Provides functionality for teleoperating a Unitree G1 robot with Inspire 6DOF dexterous hands via CloudXR, collecting datasets and receiving joint commands from an openpi client server (a pi VLA policy)</description>
+  <maintainer email="asl_team@todo.todo">asl_team</maintainer>
+  <license>Apache-2.0</license>
+
+  <exec_depend>rclpy</exec_depend>
+  <exec_depend>std_msgs</exec_depend>
+  <exec_depend>geometry_msgs</exec_depend>
+  <exec_depend>sensor_msgs</exec_depend>
+  
+  <exec_depend>unitree_hg</exec_depend>
+  <exec_depend>unitree_go</exec_depend>
+
+  <exec_depend>ros2launch</exec_depend>
+
+  <test_depend>ament_copyright</test_depend>
+  <test_depend>ament_flake8</test_depend>
+  <test_depend>ament_pep257</test_depend>
+  <test_depend>python3-pytest</test_depend>
+
+  <export>
+    <build_type>ament_python</build_type>
+  </export>
+</package>

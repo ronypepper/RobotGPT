@@ -1,0 +1,12 @@
+<library path="lib/librobotgpt_controllers">
+  <class
+      name="robotgpt/ImpedanceController"
+      type="robotgpt::ImpedanceController"
+      base_class_type="controller_interface::ControllerBase">
+
+    <description>
+      Joint-space impedance controller for the Franka Panda.
+    </description>
+
+  </class>
+</library>

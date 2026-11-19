@@ -1,0 +1,8 @@
+#!/bin/bash
+set -e
+
+PACKAGE_DIR="/RobotGPT/robotgpt_ws/src/robotgpt_g1_inspire"
+
+exec "$PACKAGE_DIR/scripts/.venv/bin/python" \
+     "$PACKAGE_DIR/robotgpt_g1_inspire/robotgpt_inverse_kinematics.py" \
+     "$@"

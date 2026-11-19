@@ -1,0 +1,47 @@
+<?xml version="1.0" ?>
+<launch>
+  <arg name="robot" default="fr3" doc="choose your robot. Possible values: [panda, fr3]"/>
+  <arg name="robot_ip" default="franka3" doc="Robot IP address"/>
+  <arg name="arm_id" default="$(arg robot)" />
+
+  <arg name="table_cam_sn" default="241122072130" />
+  <arg name="wrist_cam_sn" default="337122071131" />
+  
+  <arg name="prompt" default="Pick up the blue cube and drop it in the bin"/>
+  <arg name="policy_server_ip" default="128.131.80.13"/>
+  <arg name="policy_server_port" default="8000"/>
+  <arg name="control_frequency" default="20"/>
+  <arg name="open_loop_horizon" default="16"/>
+  <arg name="gripper_max_effort" default="0.5"/>
+
+  <include file="$(find franka_control)/launch/franka_control.launch" pass_all_args="true"/>
+  <rosparam command="load" file="$(find robotgpt)/config/impedance_controller.yaml" subst_value="true" />
+  <node name="controller_spawner" pkg="controller_manager" type="spawner" respawn="false" output="screen" args="impedance_controller"/>
+  <node pkg="rviz" type="rviz" output="screen" name="rviz" args="-d $(find robotgpt)/launch/rviz/robotgpt_franka.rviz -f $(arg arm_id)_link0 --splash-screen $(find franka_visualization)/splash.png"/>
+  <!-- <node name="rqt_reconfigure" pkg="rqt_reconfigure" type="rqt_reconfigure" required="false" /> -->
+  
+  <!-- Cameras -->
+  <include file="$(find realsense2_camera)/launch/rs_camera.launch">
+    <arg name="camera" value="table_camera"/>
+    <arg name="color_height" value="480"/>
+    <arg name="color_width" value="640"/>
+    <arg name="color_fps" value="30"/>
+    <arg name="serial_no" value="$(arg table_cam_sn)"/>
+  </include>
+  <include file="$(find realsense2_camera)/launch/rs_camera.launch">
+    <arg name="camera" value="wrist_camera"/>
+    <arg name="color_height" value="480"/>
+    <arg name="color_width" value="640"/>
+    <arg name="color_fps" value="30"/>
+    <arg name="serial_no" value="$(arg wrist_cam_sn)"/>
+  </include>
+  
+  <node name="robotgpt_openpi_agent" pkg="robotgpt" type="robotgpt_openpi_agent.launcher" output="screen">
+    <param name="prompt" value="$(arg prompt)"/>
+    <param name="policy_server_ip" value="$(arg policy_server_ip)"/>
+    <param name="policy_server_port" value="$(arg policy_server_port)"/>
+    <param name="control_frequency" value="$(arg control_frequency)"/>
+    <param name="open_loop_horizon" value="$(arg open_loop_horizon)"/>
+    <param name="gripper_max_effort" value="$(arg gripper_max_effort)"/>
+  </node>
+</launch>

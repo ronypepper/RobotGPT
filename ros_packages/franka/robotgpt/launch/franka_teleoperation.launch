@@ -1,0 +1,66 @@
+<?xml version="1.0" ?>
+<launch>
+  <arg name="robot" default="fr3" doc="choose your robot. Possible values: [panda, fr3]"/>
+  <arg name="robot_ip" default="franka3" doc="Robot IP address"/>
+  <arg name="arm_id" default="$(arg robot)" />
+  <arg name="use_sim" default="false" />
+  
+  <arg name="table_cam_sn" default="241122072130" />
+  <arg name="wrist_cam_sn" default="337122071131" />
+
+  <arg name="isaac_teleop_ip" default="128.131.81.208"/>
+
+  <arg name="publish_ee_pose_to_marker" default="False"/>
+  <arg name="gripper_max_effort" default="0.5"/>
+  <arg name="dataset_path" default="/home/asl_team/RobotGPT/datasets/dataset.hdf5"/>
+  <arg name="prompt" default="Pick up the blue cube and drop it in the bin"/>
+  <arg name="record_fps" default="20"/>
+
+  <!-- Simulation -->
+  <group if="$(arg use_sim)">
+    <include file="$(find franka_gazebo)/launch/$(arg robot).launch">
+      <arg name="rviz" value="true"/>
+    </include>
+    <rosparam command="load" file="$(find robotgpt)/config/impedance_controller.yaml" subst_value="true" />
+    <node name="controller_spawner" pkg="controller_manager" type="spawner" respawn="false" output="screen" args="impedance_controller"/>
+  </group>
+
+  <!-- Real robot -->
+  <group unless="$(arg use_sim)">
+    <include file="$(find franka_control)/launch/franka_control.launch" pass_all_args="true"/>
+    <rosparam command="load" file="$(find robotgpt)/config/impedance_controller.yaml" subst_value="true" />
+    <node name="controller_spawner" pkg="controller_manager" type="spawner" respawn="false" output="screen" args="impedance_controller"/>
+    <node pkg="rviz" type="rviz" output="screen" name="rviz" args="-d $(find robotgpt)/launch/rviz/robotgpt_franka.rviz -f $(arg arm_id)_link0 --splash-screen $(find franka_visualization)/splash.png"/>
+    <!-- <node name="rqt_reconfigure" pkg="rqt_reconfigure" type="rqt_reconfigure" required="false" /> -->
+
+    <!-- Cameras -->
+    <include file="$(find realsense2_camera)/launch/rs_camera.launch">
+      <arg name="camera" value="table_camera"/>
+      <arg name="color_height" value="480"/>
+      <arg name="color_width" value="640"/>
+      <arg name="color_fps" value="30"/>
+      <arg name="serial_no" value="$(arg table_cam_sn)"/>
+    </include>
+    <include file="$(find realsense2_camera)/launch/rs_camera.launch">
+      <arg name="camera" value="wrist_camera"/>
+      <arg name="color_height" value="480"/>
+      <arg name="color_width" value="640"/>
+      <arg name="color_fps" value="30"/>
+      <arg name="serial_no" value="$(arg wrist_cam_sn)"/>
+    </include>
+  </group>
+  
+  <!-- CloudXR teleoperation input receiver -->
+  <node name="robotgpt_isaac_teleop_bridge_receiver" pkg="robotgpt" type="robotgpt_isaac_teleop_bridge_receiver.launcher" output="screen">
+    <param name="isaac_teleop_ip" value="$(arg isaac_teleop_ip)"/>
+  </node>
+
+  <!-- Robot control interface & demonstration recording -->
+  <node name="robotgpt_isaac_teleop_controller" pkg="robotgpt" type="robotgpt_isaac_teleop_controller.launcher" output="screen">
+    <param name="publish_ee_pose_to_marker" value="$(arg publish_ee_pose_to_marker)"/>
+    <param name="gripper_max_effort" value="$(arg gripper_max_effort)"/>
+    <param name="dataset_path" value="$(arg dataset_path)"/>
+    <param name="prompt" value="$(arg prompt)"/>
+    <param name="record_fps" value="$(arg record_fps)"/>
+  </node>
+</launch>
