@@ -1,105 +1,39 @@
-# RobotGPT
+# RobotGPT - Teleoperation, demonstration collection, π₀.₅ VLA training and deployment for Franka Panda and Unitree G1 in simulation and real hardware
 
-This repository is part of a project to investigate the generalization abilities of the open-source π₀.₅ VLA model to new robot embodiments.
-
-Currently, it contains code infrastructure necessary to conduct demonstration collection, dataset conversion, training and evaluation of the π₀.₅ model in simulation with Isaac Lab for various tasks on a Franka Panda robot. Demonstration collection is supported through a VR headset with tracked controllers via CloudXR. Output artifacts are clearly structured to support extensive testing on different tasks and instructions are provided to add further robot embodiments and tasks.
-
-The following features are in progress and will be added soon:
-- Support for Unitree G1
-- More tasks
-- Demonstration collection and evaluation on real robots via ROS1/2 and the Meta Quest 3's mixed-reality passthrough
-- A report of project findings will also be added
-<!-- It contains code infrastructure necessary to conduct demonstration collection, training and evaluation of the π₀.₅ model both in simulation with Isaac Lab and on real robots via ROS. -->
-<!-- Supported robots are the Franka Panda and the Unitree G1. Demonstration collection
-- Set up locomanipulation tasks
-- Collect and convert demonstrations  -->
+This repository provides capabilities to perform teleoperation, demonstration collection, π₀.₅ VLA training and deployment for Franka Panda and Unitree G1 robots (latter with Inspire 6-DoF hands) in simulation using Isaac Lab and real hardware using ROS1 & ROS2. Demonstration collection is supported through a VR headset with tracked controllers via CloudXR. A clear organizational structure for output artifacts allow for extensive testing on different tasks and embodiments. A variety of basic simulation tasks are contained as well. Instructions are provided for extending the repository with new robot embodiments and tasks.
 
 Example video of a finetuned deployment of π₀.₅ on the Franka Panda:
 
 https://github.com/user-attachments/assets/b49c3c70-eadf-4791-8836-1e010beed735
 
-
-# Installation
-
-The installation and later usage instructions assume you perform the install steps below within a common root folder, i.e. you should end up with a folder structure like this (root folder would be "RobotLearning" here):
-```
-RobotLearning
-├── RobotGPT
-├── IsaacLab
-├── openpi
-├── env_isaaclab
-├── env_isaacteleop
-├── env_robotgpt_evals
-```
-
-### Installation Steps
-1. Install Isaac Lab 3 locally using Isaac Sim pip package and Isaac Lab from GitHub (develop branch, commit cf615d32e3): [Isaac Lab Documentation](https://isaac-sim.github.io/IsaacLab/develop/source/setup/installation/pip_installation.html).
-> If you encounter connection issues with XR teleoperation later, you may need to configure your firewall. Refer to Isaac Teleop's Quick Start guide: [Isaac Teleop Quick Start](https://nvidia.github.io/IsaacTeleop/main/getting_started/quick_start.html).
-
-2. Install openpi locally from GitHub: [openpi GitHub](https://github.com/Physical-Intelligence/openpi).
-    - If you want to log runs online with Weights&Biases, you may need to upgrade the wandb package to support longer API keys: `source openpi/.venv/bin/activate && uv pip install -U wandb`
-
-3. Install RobotGPT from GitHub in Isaac Lab's environment:
-```
-git clone https://github.com/ronypepper/RobotGPT.git
-source env_isaaclab/bin/activate
-cd RobotGPT && python -m pip install -e source/RobotGPT
-cd .. && cp -r RobotGPT/apps/robotgpt.python.xr.openxr.kit IsaacLab/apps/robotgpt.python.xr.openxr.kit  # Modified XR experience file fixing rendering issues
-```
-
-4. Modify openpi install:
-    - Run `cp -r RobotGPT/openpi/robotgpt openpi/src`
-    - Edit openpi/src/openpi/training/config.py:
-        - Add "from robotgpt.train_configurations import get_robotgpt_train_configs" to bottom of imports
-        - Add "\*get_robotgpt_train_configs()," as last entry to the _CONFIGS list, right after "*polaris_config.get_polaris_configs(),"
-
-5. Install openpi client in Isaac Lab's environment:
-```
-source env_isaaclab/bin/activate
-cd openpi/packages/openpi-client
-uv pip install -e .
-```
-
-6. Download MJCF models of Google's Scanned Objects Dataset (only required for pack items task environments):
-```
-mkdir -p robotgpt_assets/google_scanned_objects
-cd robotgpt_assets/google_scanned_objects
-git clone https://github.com/kevinzakka/mujoco_scanned_objects.git
-```
-
-7. Download Lightwheel Kitchen environment (only required for kitchen task environments):
-```
-mkdir -p robotgpt_assets
-cd robotgpt_assets
-GIT_LFS_SKIP_SMUDGE=1 git clone https://github.com/LightwheelAI/Lightwheel_Kitchen.git
-cd Lightwheel_Kitchen && git lfs pull
-unzip Lightwheel_Kitchen.zip
-rm -r Lightwheel_Kitchen
-```
-
-8. Setup evaluation environment (only required for annotation and graph generation):
-```
-uv venv --python 3.12 --seed env_robotgpt_evals
-source env_robotgpt_evals/bin/activate
-uv pip install -r RobotGPT/evals/requirements.txt
-```
-> If you encounter missing libxcb-cursor0 error when running scripts in this environment, run: `sudo apt install libxcb-cursor0`
+> Note: Intitial yet uncompleted PAL Tiago Pro support in simulation is contained in the repository as well.
 
 
-# Directory Structure
+# Installation & Usage
 
-The diagram below gives an overview of the project's directory structure.
+The full-stack provided in this repository has two main components:
+1. A robot interface for data collection and policy rollout (either an Isaac Lab simulation or a ROS package for a real robot)
+2. An integration of the specific robot into the official openpi repository for dataset conversion and π₀.₅ VLA model training
+
+**Simulation**
+
+Follow [Isaac Lab Instructions](readmes/README_simulation.md) to install and use both the robot interface and the training integration.  
+If you want to train on a separate machine, you may do so by following [Training Instructions](readmes/README_training.md) (but do not skip any steps during Isaac Lab installation!)
+
+**Real robots**
+
+Follow [Franka Panda Instructions](readmes/README_franka.md) or [Unitree G1 Instructions](readmes/README_g1.md) to install and use the robot interface.  
+Then, follow [Training Instructions](readmes/README_training.md) to install and use the training integration (may be done on a different machine).
+
+
+# Output Directory Structure
+
+Output artifacts are organized according to the diagram below. The shell scripts in the "utils" directory adhere to this structure.
 ```
 RobotLearning
 ├── RobotGPT                            ... This repository
-├── IsaacLab                            ... The Isaac Lab repository
 ├── openpi                              ... The openpi repository
-│   └── .venv                           ... openpi's python environment
-├── env_isaaclab                        ... Isaac Lab's python environment
-├── env_robotgpt_evals                  ... Python environment used by some evaluation scripts
-└── robotgpt_assets                     ... Simulation assets
-    └── google_scanned_objects
-        └── mujoco_scanned_objects
+| ...
 └── robotgpt_output                     ... Output files
     ├── datasets
     │   ├── hdf5                        ... Task datasets in hdf5 format created by XR demonstration collection in Isaac Lab
@@ -132,118 +66,6 @@ RobotLearning
 > This is done by choice to reduce confusion and not strictly required by the codebase.
 
 
-# Usage
-
-The standard pipeline has four steps:
-1. Collecting task demonstrations using an XR headset and tracked motion controllers
-2. Converting the obtained HDF5 dataset to a LeRobot dataset
-3. Training an openpi model on the LeRobot dataset
-4. Running the trained policy and evaluating its performance on the task
-
-For every step, there is a shell script available in the "utils/" directory that executes all necessary commands while adhering to the directory structure layed out above for any created file:
-1. record_xr_demos.sh
-2. convert_hdf5_to_lerobot.sh
-3. train_openpi_model.sh
-4. evaluate_openpi_model.sh
-
-For details about the required arguments, execute `XXXXXXX.sh --help`.
-
-> You may need to make the scripts executable by running:\
-> `chmod +x record_xr_demos.sh convert_hdf5_to_lerobot.sh train_openpi_model.sh evaluate_openpi_model.sh`\
-> inside "RobotGPT/utils/".
-
-
-# How to add a new robot embodiment
-
-The following steps need to be done to add a new robot embodiment:
-1. Define a new robot setup file in "RobotGPT/source/RobotGPT/RobotGPT/utils/robots/", which implements:
-    - The *setup_<ROBOT_NAME>_joint_pos_env* function, which sets up the robot in an Isaac Lab environment (a *RobotGPTEnvCfg*) for joint position control.
-    - The *_build_<ROBOT_NAME>_teleop_pipeline* function, which builds an Isaac Teleop teleoperation pipeline for absolute SE3 control of the end-effectors.
-    - The *setup_<ROBOT_NAME>_ik_abs_env* function, which sets up the robot in an Isaac Lab environment (a *RobotGPTEnvCfg*) for absolute IK control via XR teleoperation using the *_build_<ROBOT_NAME>_teleop_pipeline* function.
-    - The *process_observation_for_openpi_<ROBOT_NAME>* function. which converts Isaac Lab observations to the format expected by the corresponding openpi integration (see step 4).
-    - The *process_openpi_action_<ROBOT_NAME>* function, which converts actions by the corresponding openpi integration to the format expected by Isaac Lab (see step 4).
-2. Create a new directory containing environment configurations for the desired tasks at "RobotGPT/source/RobotGPT/RobotGPT/tasks/manager_based/<TASK_NAME>/config/". The new environment configurations use the first two functions from step 1 to setup the new robot. The "\_\_init\_\_.py" file in this folder needs to register the new environments with Isaac Lab.
-3. Register the last two functions from step 1 in "RobotGPT/source/RobotGPT/RobotGPT/utils/robots/openpi_interface.py" in the *OPENPI_INTERFACE_FCTS* object under a name for the new robot type.
-4. Define a new datatset conversion file in "RobotGPT/openpi/robotgpt/hdf5_interfaces/", which implements:
-    - The *get_data_dimensions_<ROBOT_NAME>* function, defining action and observation dimensions for use by the dataset conversion script.
-    - The *process_hdf5_frame_<ROBOT_NAME>* function, which converts actions and observations captured in an hdf5 dataset by Isaac Lab to the format expected by openpi for training. Used by the dataset conversion script.
-5. Register the *get_data_dimensions_<ROBOT_NAME>* and *process_hdf5_frame_<ROBOT_NAME>* functions in "RobotGPT/openpi/robotgpt/hdf5_dataset_interfaces.py" in the *HDF5_DATASET_INTERFACE_FCTS* object under a name for the new robot type.
-6. Define a new openpi integration file in "RobotGPT/openpi/robotgpt/train_configs/", which implements:
-    - The *<ROBOT_NAME>Inputs* class, which maps received observations from Isaac Lab or datasets to openpi's internal format. Has to match with the observation processing function defined in step 1.
-    - The *<ROBOT_NAME>Outputs* class, which remaps and truncates actions generated by openpi policys.
-    - The *<ROBOT_NAME>DataConfig* class, which defines additional data transformations and utilizes the previous two classes. Has to match with the action processing function defined in step 1.
-    - The *<ROBOT_NAME>_configs* list, containing *TrainConfig* instances that define configurations for training and using openpi policies. The *<ROBOT_NAME>DataConfig* class is defined here as a data interface, as well as additional parameters defining the openpi model used, as well as training hyperparameters.
-7. Register the *<ROBOT_NAME>_configs* list in "RobotGPT/openpi/robotgpt/train_configurations.py" by extending the *all_cfgs* object with the new configs list.
-
-See existing robot embodiment implementations for more detail.
-
-
-# How to add a new task environment
-
-At a minimum, a new environment must have an *<TASK_NAME>EnvCfg* class inheriting from *RobotGPTEnvCfg*, defining a new prompt, as well as corresponding robot-specific environment configuration classes that define joint position / absolute IK control for the respective robot, using the setup functions created in step 1 of **How to add a new robot embodiment**.
-
-See existing task environment implementations for more detail.
-
-
-# Utility commands
-
-These are some useful commands during development. All command blocks need to be executed from the common root folder, i.e. "Robot Learning" in the **Directory Structure** section above.
-
-### Zero-action task simulation
-```
-source env_isaaclab/bin/activate
-python RobotGPT/scripts/zero_agent.py --task RobotGPT-Place-Cube-In-Bin-Franka-Single-Arm-Pos-v0 \
---num_envs 1 --enable_cameras --viz kit
-```
-
-### XR Teleoperation with tracked motion controllers
-```
-source env_isaaclab/bin/activate
-python RobotGPT/scripts/teleop_se3_agent.py --task RobotGPT-Place-Cube-In-Bin-Franka-Single-Arm-IK-Abs-v0 \
---enable_cameras --xr --experience robotgpt.python.xr.openxr.kit
-```
-
-### Replay recorded demonstrations in simulation
-```
-source env_isaaclab/bin/activate
-python RobotGPT/scripts/replay_demos.py --task RobotGPT-Place-Cube-In-Bin-Franka-Single-Arm-IK-Abs-v0 \
---enable_cameras --viz kit --dataset_file robotgpt_output/datasets/hdf5/dataset.hdf5
-```
-
-### Merge multiple hdf5 datasets
-```
-source env_isaaclab/bin/activate
-python IsaacLab/scripts/tools/merge_hdf5_datasets.py \
---input_files robotgpt_output/datasets/hdf5/dataset_1.hdf5 robotgpt_output/datasets/hdf5/dataset_2.hdf5 \
---output_file robotgpt_output/datasets/hdf5/dataset.hdf5
-```
-
-### Create mp4 videos from a hdf5 dataset
-```
-source env_isaaclab/bin/activate
-mkdir -p robotgpt_output/datasets/videos
-python IsaacLab/scripts/tools/hdf5_to_mp4.py --input_file robotgpt_output/datasets/hdf5/dataset.hdf5 \
---output_dir robotgpt_output/datasets/videos/dataset --input_keys table_img wrist_img \
---video_height 224 --video_width 224 --framerate 20
-```
-
-### Openpi Pi05 base model evaluation (not finetuned) 
-**Terminal 1: Start openpi policy server**
-```
-source openpi/.venv/bin/activate
-XLA_PYTHON_CLIENT_MEM_FRACTION=0.5 python openpi/scripts/serve_policy.py policy:checkpoint \
---policy.config=robotgpt_franka_single_arm_pi05_base \
---policy.dir=gs://openpi-assets/checkpoints/pi05_base
-```
-**Terminal 2:  Start task simulation with openpi client**
-```
-source env_isaaclab/bin/activate
-python RobotGPT/scripts/openpi_agent.py --task RobotGPT-Place-Cube-In-Bin-Franka-Single-Arm-Pos-v0 \
---viz kit --record_scene --record_table --record_wrists \
---output_dir=robotgpt_output/evaluation/robotgpt_franka_single_arm_pi05_base
-```
-
-
 # License
 Different licenses apply to different directories/files of the RobotGPT repository.
 
@@ -252,7 +74,7 @@ Parts of "script/" and "source/" directories were created by the Isaac Lab templ
 The "openpi/" directory contains code to be used and partly based on scripts of the [openpi GitHub repository](https://github.com/Physical-Intelligence/openpi). The "openpi/" directory 
 is licensed under [Apache 2.0](licenses/LICENSE-openpi), like the openpi GitHub repository.
 
-If a directory contains a license, this license applies to all its files and sub-directories and takes precedence over the above stated.
+If a directory contains a license file, this license takes precedence over the above stated and applies to all the files of the directory and its sub-directories.
 
 If a file notes a specific license in its header, this license takes precedence over the above stated.
 
