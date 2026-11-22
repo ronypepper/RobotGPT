@@ -11,31 +11,31 @@ You can read some more detail in the [project's report](report/RobotGPT_Report.p
 
 ### Real robots
 
-A Franka Panda task demonstration teleoperated using a Meta Quest 3 XR headset (as seen by the teleoperator):
+A Franka Panda task demonstration teleoperated using a Meta Quest 3 XR headset (3x speed):
 
-TODO
+https://github.com/user-attachments/assets/3a4a1b6d-50c0-430a-8b97-91ace1046ae3
 
 A Unitree G1 task demonstration teleoperated using a Meta Quest 3 XR headset (as seen by the teleoperator):
 
-TODO
+https://github.com/user-attachments/assets/b2098b01-9d92-499e-a478-ec6d323a41b7
 
-Deployment of a finetuned π₀.₅ VLA policy on a Franka Panda for a grocery packing task:
+Deployment of a finetuned π₀.₅ VLA policy on a Franka Panda for a grocery packing task (2x speed):
 
-TODO
+https://github.com/user-attachments/assets/61fb5339-10d0-4ee7-a689-2383faa92183
 
 ### Simulation
 
-A Franka Panda teleoperated using a Meta Quest 3 XR headset (as seen by the teleoperator):
+A Franka Panda teleoperated using a Meta Quest 3 XR headset:
 
-TODO
+https://github.com/user-attachments/assets/9588f3c1-a37b-4138-ab77-d3595c486d3f
 
-Deployment of a finetuned π₀.₅ VLA policy on a Franka Panda for a grocery packing task:
+Deployment of a finetuned π₀.₅ VLA policy on a Franka Panda for a grocery packing task (2.5x speed):
 
 https://github.com/user-attachments/assets/b49c3c70-eadf-4791-8836-1e010beed735
 
 Deployment of a finetuned π₀.₅ VLA policy on a Unitree G1 for a pouring task:
 
-TODO
+https://github.com/user-attachments/assets/11519034-92df-4b8e-8660-cf2567e19d7b
 
 
 ## Installation & Usage
