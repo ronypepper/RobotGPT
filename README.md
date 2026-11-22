@@ -29,13 +29,13 @@ A Franka Panda teleoperated using a Meta Quest 3 XR headset:
 
 https://github.com/user-attachments/assets/9588f3c1-a37b-4138-ab77-d3595c486d3f
 
-Deployment of a finetuned π₀.₅ VLA policy on a Franka Panda for a grocery packing task (2.5x speed):
+Deployment of a finetuned π₀.₅ VLA policy on a Franka Panda for a grocery packing task:
 
 https://github.com/user-attachments/assets/b49c3c70-eadf-4791-8836-1e010beed735
 
 Deployment of a finetuned π₀.₅ VLA policy on a Unitree G1 for a pouring task:
 
-https://github.com/user-attachments/assets/11519034-92df-4b8e-8660-cf2567e19d7b
+https://github.com/user-attachments/assets/9fe3089f-94ee-4663-84e5-0e9880c74441
 
 
 ## Installation & Usage
