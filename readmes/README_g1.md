@@ -1,11 +1,14 @@
 # Unitree G1 Instructions
 
-RobotGPT interface for the Unitree G1 robot with Inspire 6-DoF hands. Support is available for the built-in arm control routines, which stabilized lower body while providing arm joint command interfaces. However, we were not able to get the robot to respond to these commands interfaces described in the [official documentation](https://support.unitree.com/home/en/G1_developer/arm_control_routine). As we were mainly interested to use the project with a similar, proprietary solution developed in-house, we abandoned the built-in interfaces. However, the implementation for it is fully in place and also works with the [official simulator by Unitree](https://github.com/unitreerobotics/unitree_sim_isaaclab), which mirrors the robot's built-in interfaces. The issue was therefore likely only some version or configuration mismatch, and the implementation should work with a real robot and its built-in interfaces, even though we were not able to test it.
+RobotGPT interface for the Unitree G1 robot with Inspire 6-DoF hands. Support is available for the built-in arm control routines, which stabilizes the lower body while providing arm joint command interfaces. However, we were not able to get the robot to respond to these commands interfaces described in the [official documentation](https://support.unitree.com/home/en/G1_developer/arm_control_routine). As we were mainly interested to use the project with a similar, proprietary solution developed in-house, we did not troubleshoot the built-in interfaces further. However, the implementation for it is fully in place and also works with the [official simulator by Unitree](https://github.com/unitreerobotics/unitree_sim_isaaclab), which mirrors the robot's built-in interfaces. The issue was therefore likely only some version or configuration mismatch, and the implementation should work with a real robot and its built-in interfaces, even though we were not able to verify it.
 
-The selection of the command interfaces is done by a *mode* argument in relevant ROS nodes (see [Usage](README_g1.md#usage)), which may be:
+The selection of the command interfaces is done by adding a *mode* argument to the ROS launch files (see [Usage](README_g1.md#usage).) Possible values are:
 - **g1_internal_controller** ... the official, built-in arm control routine interfaces by Unitree
 - **g1_proprietary_controller** ... the proprietary, in-house solution
 - **g1_isaaclab_simulation** ... the official, hardware-mirrored Isaac Lab simulation by Unitree
+
+For cameras we used the G1's built-in Realsense camera in the head for table view and two additional Realsense D435I cameras for the wrists. The camera serial numbers are configurable through arguments passed to relevant ROS launch files. 3D-printable wrist mounts for the D435I are [available here](../ros_packages/g1/wrist_camera_mounts/g1_inspire_d435i_wrist_mounts.3mf), which were modified from the D405 camera mounts available in Unitree's [xr_teleoperate repository](https://github.com/unitreerobotics/xr_teleoperate/blob/main/Device.md).
+
 
 ## Installation
 
@@ -114,9 +117,9 @@ colcon build
 
 ## Usage
 
-Initialize the robot command interface you intend to use (depending on the *mode* argument).  
-For the official, built-in interface by Unitree (mode:=g1_internal_controller) refer to the [official documentation](https://support.unitree.com/home/en/G1_developer/arm_control_routine).  
-For the official, hardware-mirrored simulation by Unitree, refer to [Unitree Official G1 Simulation](README_g1.md#unitree-official-g1-simulation).
+Initialize the robot command interface you intend to use (depending on the *mode* argument):
+- For the official, built-in interface by Unitree (*mode:=g1_internal_controller*) refer to the [official documentation](https://support.unitree.com/home/en/G1_developer/arm_control_routine).  
+- For the official, hardware-mirrored simulation by Unitree (*mode:=g1_isaaclab_simulation*), refer to [Unitree Official G1 Simulation](README_g1.md#unitree-official-g1-simulation). This mode only supports teleoperation without data collection because the cameras are not implemented.
 
 ### Teleoperation
 
@@ -142,7 +145,7 @@ source ~/RobotGPT/robotgpt_ws/install/setup.bash
 ros2 launch robotgpt_g1_inspire teleoperation.launch.xml  # add arguments, e.g. mode, dataset path, hardware information, ...
 ```
 
-> Note: for users of the proprietary simulation, replace "source ~/RobotGPT/unitree_ros2/setup.sh" above with "source ~/RobotGPT/unitree_ros2/cyclonedds_ws/install/setup.bash"
+> **Note:** for users of the proprietary simulation, replace "source ~/RobotGPT/unitree_ros2/setup.sh" above with "source ~/RobotGPT/unitree_ros2/cyclonedds_ws/install/setup.bash"
 
 You may now teleoperate the robot and record multiple episodes of task demonstrations using the XR motion controllers:
  - Right primary (lower) button: Start teleoperation / Stop teleoperation and save dataset recording
@@ -162,7 +165,7 @@ source ~/RobotGPT/robotgpt_ws/install/setup.bash
 ros2 launch robotgpt_g1_inspire openpi_agent.launch.xml  # add arguments, e.g. mode, policy server ip, hardware information, ...
 ```
 
-> Note: for users of the proprietary simulation, replace "source ~/RobotGPT/unitree_ros2/setup.sh" above with "source ~/RobotGPT/unitree_ros2/cyclonedds_ws/install/setup.bash"
+> **Note:** for users of the proprietary simulation, replace "source ~/RobotGPT/unitree_ros2/setup.sh" above with "source ~/RobotGPT/unitree_ros2/cyclonedds_ws/install/setup.bash"
 
 You can now start policy rollout on the robot, stop the rollout or command the robot to its home pose using the following commands:  
 `ros2 topic pub /client_command std_msgs/msg/String 'data: 'HOME'' --once`  
@@ -172,24 +175,24 @@ You can now start policy rollout on the robot, stop the rollout or command the r
 
 ## Unitree Official G1 Simulation
 
+The official simulation mirrors the robot's real hardware interfaces and can therefore be used to verify teleoperation functionality. When using it, make sure to pass *mode:=g1_isaaclab_simulation* to the teleoperation ROS launch file.
+
 ### Installation
 
+1. On your host PC with an NVIDIA GPU, download the modified Dockerfile of the simulation:
+```
+mkdir -p ~/RobotGPT
+cd ~/RobotGPT
+git clone https://github.com/ronypepper/RobotGPT.git
+mv RobotGPT/ros_packages/g1/unitree_simulation .
+rm -r RobotGPT
 
-
-
-
-
-
-Install simulation:
-
-git clone https://github.com/unitreerobotics/unitree_sim_isaaclab.git
-docker pull nvidia/cuda:12.2.0-runtime-ubuntu22.04
-cd unitree_sim_isaaclab
-# Replace dockerfile
+# docker pull nvidia/cuda:12.2.0-runtime-ubuntu22.04
+cd unitree_simulation
 docker build -t unitree-sim:latest -f Dockerfile .
-
-Create the docker container:
-
+```
+2. Create the docker container:
+```
 docker run -it \
   --name g1_sim \
   --privileged \
@@ -203,21 +206,27 @@ docker run -it \
   -v "${XAUTHORITY:-$HOME/.Xauthority}:/root/.Xauthority:ro" \
   -v /dev:/dev \
   unitree-sim /bin/bash
+```
+3. Prepare the container:
+```
+docker exec -it g1_sim bash  # Enter the docker container
 
-In the container:
 apt update
 apt install git-lfs
 cd unitree_sim_isaaclab
 . fetch_assets.sh
+```
 
-On PC:
-xhost +local:docker
+### Usage
 
-Run simulation:
+Run the simulation with an included example scene:
+```
+docker exec -it g1_sim bash  # Enter the docker container
+
 cd unitree_sim_isaaclab
-python sim_main.py --task Isaac-PickPlace-RedBlock-G129-Inspire-Joint --robot_type g129 --device cpu  --enable_cameras --enable_inspire_dds
+python sim_main.py --task Isaac-PickPlace-RedBlock-G129-Inspire-Joint --robot_type g129 --device cpu --enable_cameras --enable_inspire_dds
+```
+You may now start teleoperation.
 
-When simulation cannot open a window, make sure to:
-xhost +local:docker
-and check that echo $DISPLAY matches inside container and on host pc. If not set it in container using:
-export DISPLAY=:X
+> **Note:** If the simulation cannot open a window, try to add display server permissions on your host: `xhost +local:docker`
+> Also check that the DISPLAY environment variable in the container has the same value as the host.

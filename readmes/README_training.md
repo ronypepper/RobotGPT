@@ -1,5 +1,7 @@
 # Standalone VLA Training Instructions
 
+This file describes how to setup and perform dataset conversion and model training independent of a specific robot interface component.
+
 
 ## Installation
 

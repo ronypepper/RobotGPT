@@ -2,31 +2,60 @@
 
 This repository provides capabilities to perform teleoperation, demonstration collection, π₀.₅ VLA training and deployment for Franka Panda and Unitree G1 robots (latter with Inspire 6-DoF hands) in simulation using Isaac Lab and real hardware using ROS1 & ROS2. Demonstration collection is supported through a VR headset with tracked controllers via CloudXR. A clear organizational structure for output artifacts allow for extensive testing on different tasks and embodiments. A variety of basic simulation tasks are contained as well. Instructions are provided for extending the repository with new robot embodiments and tasks.
 
-Example video of a finetuned deployment of π₀.₅ on the Franka Panda:
+You can read some more detail in the [project's report](report/RobotGPT_Report.pdf).
+
+> **Note:** Intitial yet uncompleted PAL Tiago Pro support in simulation is contained in the repository as well. To use it you will need to copy the contents of the "robots/pal_tiago_pro" directory to "robotgpt_assets/pal_tiago_pro/pal_mjlab/pal_tiago_pro".
+
+
+## Showcase
+
+### Real robots
+
+A Franka Panda task demonstration teleoperated using a Meta Quest 3 XR headset (as seen by the teleoperator):
+
+TODO
+
+A Unitree G1 task demonstration teleoperated using a Meta Quest 3 XR headset (as seen by the teleoperator):
+
+TODO
+
+Deployment of a finetuned π₀.₅ VLA policy on a Franka Panda for a grocery packing task:
+
+TODO
+
+### Simulation
+
+A Franka Panda teleoperated using a Meta Quest 3 XR headset (as seen by the teleoperator):
+
+TODO
+
+Deployment of a finetuned π₀.₅ VLA policy on a Franka Panda for a grocery packing task:
 
 https://github.com/user-attachments/assets/b49c3c70-eadf-4791-8836-1e010beed735
 
-> Note: Intitial yet uncompleted PAL Tiago Pro support in simulation is contained in the repository as well.
+Deployment of a finetuned π₀.₅ VLA policy on a Unitree G1 for a pouring task:
+
+TODO
 
 
-# Installation & Usage
+## Installation & Usage
 
 The full-stack provided in this repository has two main components:
 1. A robot interface for data collection and policy rollout (either an Isaac Lab simulation or a ROS package for a real robot)
 2. An integration of the specific robot into the official openpi repository for dataset conversion and π₀.₅ VLA model training
 
-**Simulation**
+### Simulation
 
 Follow [Isaac Lab Instructions](readmes/README_simulation.md) to install and use both the robot interface and the training integration.  
 If you want to train on a separate machine, you may do so by following [Training Instructions](readmes/README_training.md) (but do not skip any steps during Isaac Lab installation!)
 
-**Real robots**
+### Real robots
 
 Follow [Franka Panda Instructions](readmes/README_franka.md) or [Unitree G1 Instructions](readmes/README_g1.md) to install and use the robot interface.  
 Then, follow [Training Instructions](readmes/README_training.md) to install and use the training integration (may be done on a different machine).
 
 
-# Output Directory Structure
+## Output Directory Structure
 
 Output artifacts are organized according to the diagram below. The shell scripts in the "utils" directory adhere to this structure.
 ```
@@ -62,11 +91,11 @@ RobotLearning
         :   :   └── CHECKPOINT          ... Checkpoint number
         :   :   :   :
 ```
-> Note that every dataset in RobotGPT has a matching experiment, therefore DATASET_NAME == EXPERIMENT_NAME.\
+> **Note:** Every dataset in RobotGPT has a matching experiment, therefore DATASET_NAME == EXPERIMENT_NAME.
 > This is done by choice to reduce confusion and not strictly required by the codebase.
 
 
-# License
+## License
 Different licenses apply to different directories/files of the RobotGPT repository.
 
 Parts of "script/" and "source/" directories were created by the Isaac Lab template generator and modified or are based on other files from the [Isaac Lab GitHub repository](https://github.com/isaac-sim/IsaacLab). These directories are licensed under the [BSD-3 License](licenses/LICENSE-isaaclab), like the Isaac Lab GitHub repository.

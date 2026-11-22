@@ -1,5 +1,8 @@
 # Franka Panda Instructions
 
+Repository was tested on a Franka Research 3 robot arm. Franka Panda or Franka Research 3 may be configured by arguments passed to relevant ROS launch files.  
+For cameras we used two Realsense D435I cameras. The camera serial numbers are configurable through arguments passed to relevant ROS launch files.
+
 
 ## Installation
 
