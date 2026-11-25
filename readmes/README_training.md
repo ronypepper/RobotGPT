@@ -6,7 +6,7 @@ This file describes how to setup and perform dataset conversion and model traini
 ## Installation
 
 1. Install openpi from GitHub: [openpi GitHub](https://github.com/Physical-Intelligence/openpi).
-    - If you want to log runs online with Weights&Biases, you may need to upgrade the wandb package to support longer API keys: `source openpi/.venv/bin/activate && uv pip install -U wandb`
+    - If you want to log runs online with Weights&Biases, you may need to upgrade the wandb package to support longer API keys: `source openpi/.venv/bin/activate && uv pip install wandb==0.28.1`
 
 2. Modify openpi install with RobotGPT integration:
     - Run `git clone https://github.com/ronypepper/RobotGPT.git`

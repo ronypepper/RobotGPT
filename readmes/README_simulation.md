@@ -24,7 +24,7 @@ RobotLearning
 > If you encounter connection issues with XR teleoperation later, you may need to configure your firewall. Refer to Isaac Teleop's Quick Start guide: [Isaac Teleop Quick Start](https://nvidia.github.io/IsaacTeleop/main/getting_started/quick_start.html).
 
 2. Install openpi from GitHub: [openpi GitHub](https://github.com/Physical-Intelligence/openpi).
-    - If you want to log runs online with Weights&Biases, you may need to upgrade the wandb package to support longer API keys: `source openpi/.venv/bin/activate && uv pip install -U wandb`
+    - If you want to log runs online with Weights&Biases, you may need to upgrade the wandb package to support longer API keys: `source openpi/.venv/bin/activate && uv pip install wandb==0.28.1`
 
 3. Install RobotGPT from GitHub in Isaac Lab's environment:
 ```
